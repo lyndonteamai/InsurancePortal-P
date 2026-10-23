@@ -1,6 +1,7 @@
-import type { InsuranceProduct, ProductCategory } from "@/data/types";
+import type { InsuranceProduct, ProductCategory, Evidence } from "@/data/types";
 import { CATEGORY_LABELS } from "@/data/types";
 import { getInsurer } from "@/data/insurers";
+import { getEvidence } from "@/data/evidence";
 
 // ============================================================
 // 比較引擎 V2 — 四個層次
@@ -45,6 +46,13 @@ export type ComparisonRow = {
   /** 若此欄在產品之間不同，給一個簡短標記 */
   differs?: boolean;
   hint?: string;
+  /**
+   * 每個產品的證據（Evidence-Based Comparison）。
+   * 與 values 一一對應：使用者點擊任何一個數值，就能看到它背後的來源。
+   * 沒有證據時這裡是 null —— UI 必須如實顯示「尚未有來源」，
+   * 不可以用模糊字眼掩蓋資料缺口。
+   */
+  evidences?: (Evidence | null)[];
 };
 
 // ------------------------------------------------------------
@@ -265,19 +273,32 @@ export function buildComparisonRows(selected: InsuranceProduct[]): ComparisonRow
   const n = selected.length;
   const rows: ComparisonRow[] = [];
 
+  /**
+   * push 一個比較欄位。
+   *
+   * sourceFactLabel 用來定位證據：它會對應到 evidence 註冊表裡的事實名稱。
+   * 傳了 sourceFactLabel，這一行的每個數值就會帶上證據，UI 可以顯示
+   * 「查看證據」按鈕；沒傳的欄位（例如「保險公司」這種平台自身資料）
+   * 就沒有證據按鈕 —— 這是刻意的，不是遺漏。
+   */
   const push = (
     group: string,
     label: string,
     fn: (p: InsuranceProduct) => string | null,
     hint?: string,
+    sourceFactLabel?: string,
   ) => {
     const values = selected.map((p) => fn(p));
+    const evidences = sourceFactLabel
+      ? selected.map((p) => getEvidence(p, sourceFactLabel) ?? null)
+      : undefined;
     rows.push({
       group,
       label,
       values,
       differs: new Set(values.map((v) => v ?? MISSING_DATA)).size > 1,
       hint,
+      evidences,
     });
   };
 
@@ -317,7 +338,7 @@ export function buildComparisonRows(selected: InsuranceProduct[]): ComparisonRow
   );
 
   // 保費
-  push("保費", "保費示例", (p) => premiumText(p));
+  push("保費", "保費示例", (p) => premiumText(p), undefined, "保費示例");
   push(
     "保費",
     "示例假設條件",
@@ -331,7 +352,7 @@ export function buildComparisonRows(selected: InsuranceProduct[]): ComparisonRow
   );
 
   // 保障結構
-  push("保障結構", "自付額", (p) => deductibleText(p));
+  push("保障結構", "自付額", (p) => deductibleText(p), undefined, "自付額");
   push("保障結構", "自付額計算基礎", (p) => p.deductible?.basis ?? null);
   push(
     "保障結構",
@@ -340,8 +361,10 @@ export function buildComparisonRows(selected: InsuranceProduct[]): ComparisonRow
       p.waitingPeriod?.hasWaitingPeriod
         ? (p.waitingPeriod.value ?? null)
         : "無",
+    undefined,
+    "等候期",
   );
-  push("保障結構", "續保安排", (p) => renewalText(p));
+  push("保障結構", "續保安排", (p) => renewalText(p), undefined, "續保安排");
   push("保障結構", "續保說明", (p) => p.renewal?.description ?? null);
   push(
     "保障結構",
@@ -374,6 +397,10 @@ export function buildComparisonRows(selected: InsuranceProduct[]): ComparisonRow
           .map((i) => `${i.name}${i.limit ? `（${i.limit}）` : ""}`)
           .join("；");
       },
+      undefined,
+      // 逐項保障由多個 coverage item 組成，證據掛在第一項上；
+      // Evidence Drawer 會列出該產品此類別的所有來源。
+      undefined,
     );
   }
 

@@ -9,12 +9,15 @@ import {
   ShieldAlert,
   Table2,
   Info,
+  Quote,
 } from "lucide-react";
 import type { InsuranceProduct, ProductCategory } from "@/data/types";
 import { CATEGORY_LABELS } from "@/data/types";
 import { CompareButton } from "./compare-button";
 import { VerificationBadge } from "./verification-badge";
-import { SourceList, SourceCitation } from "./source-list";
+import { SourceList } from "./source-list";
+import { SourceDrawer, useSourceDrawer, DemoDataNotice } from "./source-drawer";
+import { getEvidence, hasTraceableEvidence } from "@/data/evidence";
 import { ReportIssueButton } from "./report-issue-button";
 import {
   ProductIntelligenceSummary,
@@ -45,6 +48,7 @@ export function ProductDetailView({
   insurerHref,
   relatedTerms,
   relatedArticles,
+  relatedQuestions,
   relatedProducts,
 }: {
   product: InsuranceProduct;
@@ -52,6 +56,7 @@ export function ProductDetailView({
   insurerHref: string;
   relatedTerms: { slug: string; zh: string; term: string }[];
   relatedArticles: { slug: string; title: string; category: string; readingMinutes: number }[];
+  relatedQuestions: { id: string; question: string }[];
   relatedProducts: {
     id: string;
     slug: string;
@@ -64,6 +69,24 @@ export function ProductDetailView({
   useEffect(() => {
     trackEvent("product_view", { productId: product.id, category: product.category });
   }, [product.id, product.category]);
+
+  // Source-First：每個欄位的「查看來源」按鈕共用這個抽屜
+  const { drawerState, openDrawer, closeDrawer } = useSourceDrawer();
+
+  /** 開啟某個事實的證據面板；沒有可追溯來源時明確顯示「尚未有來源」 */
+  const showEvidence = (factLabel: string, factValue: string, sourceIds: string[]) => {
+    const ev = getEvidence(product, factLabel);
+    const sources = product.sourceDocuments.filter((s) => sourceIds.includes(s.id));
+    openDrawer({
+      evidence: ev,
+      product,
+      sources: ev ? undefined : sources,
+      factLabel,
+      factValue,
+      title: "查看來源",
+    });
+    trackEvent("source_open", { productId: product.id, factLabel });
+  };
 
   const catLabel = CATEGORY_LABELS[product.category];
   const hubHref = hubFor(product.category);
@@ -130,6 +153,18 @@ export function ProductDetailView({
         </div>
       </header>
 
+      {/* Source-First 說明條：讓讀者知道每一個數字都可以追問來源 */}
+      <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-brand-100 bg-brand-50/50 px-3.5 py-2.5">
+        <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-brand-900">
+          <Quote size={13} aria-hidden />
+          Source-First 頁面
+        </p>
+        <p className="text-[12.5px] leading-relaxed text-brand-900/75">
+          這個頁面上的每個數字旁邊都有「查看來源」。點擊可以看到它來自哪份文件、
+          哪個版本、哪一頁，以及最後一次人工審核的日期。
+        </p>
+      </div>
+
       {/* 1. Intelligence Summary */}
       <div className="mt-7">
         <ProductIntelligenceSummary product={product} />
@@ -183,10 +218,14 @@ export function ProductDetailView({
                     {c.limit ?? "資料未提供"}
                   </td>
                   <td className="px-4 py-3.5">
-                    <SourceCitation
-                      sourceIds={c.sourceIds}
-                      sources={product.sourceDocuments}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => showEvidence(c.name, c.limit ?? c.summary, c.sourceIds)}
+                      className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-1.5 py-0.5 text-[10.5px] font-medium text-ink-soft transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
+                    >
+                      <Quote size={10} aria-hidden />
+                      查看來源
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -244,10 +283,14 @@ export function ProductDetailView({
                 {e.description}
               </p>
               <div className="mt-1.5 pl-[23px]">
-                <SourceCitation
-                  sourceIds={e.sourceIds}
-                  sources={product.sourceDocuments}
-                />
+                <button
+                  type="button"
+                  onClick={() => showEvidence(`不保：${e.name}`, e.description, e.sourceIds)}
+                  className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-1.5 py-0.5 text-[10.5px] font-medium text-ink-soft transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
+                >
+                  <Quote size={10} aria-hidden />
+                  查看來源
+                </button>
               </div>
             </li>
           ))}
@@ -278,7 +321,7 @@ export function ProductDetailView({
                 : undefined
             }
             sourceIds={product.deductible?.sourceIds ?? []}
-            sources={product.sourceDocuments}
+            onShowSource={showEvidence}
           />
           <TermCard
             title="等待期"
@@ -291,14 +334,14 @@ export function ProductDetailView({
             }
             note="等待期內發生的疾病或事故不獲保障"
             sourceIds={product.waitingPeriod?.sourceIds ?? []}
-            sources={product.sourceDocuments}
+            onShowSource={showEvidence}
           />
           <TermCard
             title="續保安排"
             value={product.renewal?.label ?? "資料未提供"}
             note={product.renewal?.description}
             sourceIds={product.renewal?.sourceIds ?? []}
-            sources={product.sourceDocuments}
+            onShowSource={showEvidence}
           />
           <TermCard
             title="條款版本"
@@ -383,6 +426,9 @@ export function ProductDetailView({
                 <th className="px-4 py-3 text-[12.5px] font-semibold text-ink">
                   首年保費
                 </th>
+                <th className="px-4 py-3 text-[12.5px] font-semibold text-ink">
+                  資料來源
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -399,6 +445,22 @@ export function ProductDetailView({
                   </td>
                   <td className="px-4 py-3.5 text-[14px] font-semibold tabular-nums text-ink">
                     HK${e.annualPremium.toLocaleString("en-US")}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        showEvidence(
+                          `保費示例：${e.label}`,
+                          `HK$${e.annualPremium.toLocaleString("en-US")}`,
+                          e.sourceIds,
+                        )
+                      }
+                      className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-1.5 py-0.5 text-[10.5px] font-medium text-ink-soft transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
+                    >
+                      <Quote size={10} aria-hidden />
+                      查看來源
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -425,6 +487,7 @@ export function ProductDetailView({
           代表該數字目前無法對照文件核對。
         </p>
         <div className="mt-4">
+          <DemoDataNotice className="mb-3" />
           <SourceList sources={product.sourceDocuments} />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -510,6 +573,36 @@ export function ProductDetailView({
         </section>
       )}
 
+      {relatedQuestions.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-[18px] font-semibold tracking-tight text-ink">
+            相關問題
+          </h2>
+          <p className="mt-1.5 text-[13px] text-ink-soft">
+            這些問題由關係引擎根據這款產品的保障與條款連結出來。
+          </p>
+          <ul className="mt-3 space-y-2">
+            {relatedQuestions.map((q) => (
+              <li key={q.id}>
+                <Link
+                  href={`/ask?q=${encodeURIComponent(q.question)}`}
+                  className="group flex items-center justify-between gap-3 rounded-lg border border-ink-line bg-white px-4 py-3 hover:border-brand-300 hover:bg-brand-50/40"
+                >
+                  <span className="text-[13.5px] leading-relaxed text-ink group-hover:text-brand-700">
+                    {q.question}
+                  </span>
+                  <ArrowRight
+                    size={15}
+                    className="shrink-0 text-ink-mute group-hover:text-brand-700"
+                    aria-hidden
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {relatedProducts.length > 0 && (
         <section className="mt-10">
           <h2 className="text-[18px] font-semibold tracking-tight text-ink">
@@ -542,6 +635,18 @@ export function ProductDetailView({
           </div>
         </section>
       )}
+
+      {/* Source Drawer：任何欄位的「查看來源」都打開這個面板 */}
+      <SourceDrawer
+        open={drawerState !== null}
+        onClose={closeDrawer}
+        evidence={drawerState?.evidence}
+        product={drawerState?.product ?? product}
+        sources={drawerState?.sources}
+        factLabel={drawerState?.factLabel}
+        factValue={drawerState?.factValue}
+        title={drawerState?.title ?? "查看來源"}
+      />
     </div>
   );
 }
@@ -551,13 +656,13 @@ function TermCard({
   value,
   note,
   sourceIds = [],
-  sources = [],
+  onShowSource,
 }: {
   title: string;
   value: string;
   note?: string;
   sourceIds?: string[];
-  sources?: InsuranceProduct["sourceDocuments"];
+  onShowSource?: (title: string, value: string, sourceIds: string[]) => void;
 }) {
   return (
     <div className="rounded-xl border border-ink-line bg-white p-4">
@@ -565,14 +670,21 @@ function TermCard({
         <Table2 size={13} aria-hidden />
         {title}
       </dt>
-      <dd className="mt-1.5 text-[14.5px] font-semibold text-ink">{value}</dd>
+      <dd className="mt-1.5 flex flex-wrap items-center gap-2 text-[14.5px] font-semibold text-ink">
+        {value}
+        {onShowSource && (
+          <button
+            type="button"
+            onClick={() => onShowSource(title, value, sourceIds)}
+            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-1.5 py-0.5 text-[10.5px] font-medium text-ink-soft transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
+          >
+            <Quote size={10} aria-hidden />
+            查看來源
+          </button>
+        )}
+      </dd>
       {note && (
         <dd className="mt-1 text-[12.5px] leading-relaxed text-ink-mute">{note}</dd>
-      )}
-      {sourceIds.length > 0 && (
-        <dd className="mt-1">
-          <SourceCitation sourceIds={sourceIds} sources={sources} />
-        </dd>
       )}
     </div>
   );

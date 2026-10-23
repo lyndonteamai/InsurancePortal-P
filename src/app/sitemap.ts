@@ -44,6 +44,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/legal/prototype",
   ];
 
+  // 商業與排序透明度：屬於信任中心的一部分，同樣需要被索引
+  const transparency: string[] = [
+    "/ranking-methodology",
+    "/commercial-transparency",
+  ];
+
   return [
     ...core.map((c) => ({
       url: `${site.url}${c.path}`,
@@ -56,6 +62,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "yearly" as const,
       priority: 0.3,
+    })),
+    ...transparency.map((p) => ({
+      url: `${site.url}${p}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
     })),
     // 主題權威頁
     ...hubs.map((h) => ({

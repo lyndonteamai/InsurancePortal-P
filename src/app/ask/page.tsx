@@ -4,9 +4,9 @@ import { pageMetadata } from "@/lib/structured-data";
 import { AskEngine } from "@/components/ask-engine";
 
 export const metadata: Metadata = pageMetadata({
-  title: "問保險問題｜用一句話查香港保險概念與條款",
+  title: "問保險 AI｜用一句話查香港保險概念與條款",
   description:
-    "用自然語言查詢香港保險概念。引擎從平台資料庫的常見問題、術語、知識文章與產品資料中找出最相關的條目，附上來源連結，不生成資料庫以外的內容。",
+    "用自然語言查詢香港保險概念。回答分成簡單答案、相關產品、相關條款、官方來源與進一步比較五段，全部數字來自平台資料庫並標明根據，不生成資料庫以外的內容。",
   path: "/ask",
 });
 

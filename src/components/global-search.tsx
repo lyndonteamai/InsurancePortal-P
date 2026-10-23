@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, X, CornerDownLeft, History, ArrowRight } from "lucide-react";
+import { Search, X, CornerDownLeft, History, ArrowRight, Sparkles } from "lucide-react";
 import {
   searchAll,
   searchSuggestions,
   defaultSuggestions,
+  isQuestionQuery,
+  findQuickAnswer,
   type SearchResult,
 } from "@/lib/search";
 import { SEARCH_KIND_META, SEARCH_KIND_ORDER } from "@/lib/search-ui";
@@ -57,6 +59,11 @@ export function GlobalSearchDialog({
 
   const results = useMemo(() => searchAll(query), [query]);
   const dynamicSuggestions = useMemo(() => searchSuggestions(query), [query]);
+  const isQuestion = useMemo(() => isQuestionQuery(query), [query]);
+  const quickAnswer = useMemo(
+    () => (isQuestion ? findQuickAnswer(query) : null),
+    [isQuestion, query],
+  );
 
   useEffect(() => {
     if (open) {
@@ -84,7 +91,7 @@ export function GlobalSearchDialog({
 
   const grouped = SEARCH_KIND_ORDER.map((kind) => ({
     kind,
-    items: results.filter((r) => r.kind === kind),
+    items: results.filter((r) => r.kind === kind && r.resultType === "organic"),
   })).filter((g) => g.items.length > 0);
 
   function go(href: string) {
@@ -119,7 +126,7 @@ export function GlobalSearchDialog({
                 go(results[0].href);
               }
             }}
-            placeholder="搜尋產品、術語、條款或保險問題…"
+            placeholder="搜索保險產品、公司、保障、條款或直接問問題…"
             className="w-full bg-transparent py-4 text-[15px] outline-none placeholder:text-ink-mute"
             style={{ height: 52 }}
           />
@@ -170,6 +177,25 @@ export function GlobalSearchDialog({
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {query && quickAnswer && (
+            <div className="border-b border-ink-line bg-brand-50/60 px-4 py-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
+                <Sparkles size={11} aria-hidden />
+                一句話答案
+              </p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-brand-900">
+                {quickAnswer.answer}
+              </p>
+              <Link
+                href={`/ask?q=${encodeURIComponent(query)}`}
+                onClick={onClose}
+                className="mt-1.5 inline-block text-[12px] font-medium text-brand-700 hover:underline"
+              >
+                深入問問 →
+              </Link>
             </div>
           )}
 

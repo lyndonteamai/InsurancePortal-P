@@ -1,8 +1,82 @@
 # PLATFORM_PRINCIPLES.md — 保險指南平台原則
 
 > 本文件是 `InsurancePortal-P`（保險指南 Insurance Compass HK）資料層與內容生產的**約束條件**。
-> 任何新增的產品、頁面、欄位、演算法，都必須符合這八條原則。
+> 任何新增的產品、頁面、欄位、演算法，都必須符合這四條創辦人原則與下方八條實作原則。
 > 原則不是宣傳文案，而是可被檢查的規則——它們對應到程式碼中的具體實作位置。
+
+---
+
+# 第 0 層：創辦人原則（Founder Principles）
+
+> 這四條高於下面所有實作原則。當兩者衝突時，第 0 層優先。
+> 它們不是理念宣示，而是可以被程式碼審查推翻的規則。
+
+## F1. NEVER PAY-TO-RANK
+
+**Never pay to rank.**
+
+付費合作可以影響合作的形式、位置與時程，但**永遠不能購買自然搜索排名**。
+
+**可驗證的失敗**：`src/lib/search.ts` 的 `organicRankScore()` 只接受 `resultType === "organic"` 的結果；
+任何 `resultType === "sponsored"` 的項目在排序前就被 `extractSponsored()` 撈出，
+不進入自然結果佇列，也不參與自然排序計分。
+若有一天付費結果可以被餵進 `organicRankScore()`，這條原則即已被違反。
+
+**對應頁面**：`/ranking-methodology`（搜索與比較結果如何排序？）
+
+---
+
+## F2. NEVER SELL INSURANCE DIRECTLY
+
+**Never sell insurance directly.**
+
+平台是資訊與比較平台，不是銷售渠道。平台**永遠不完成保險交易**。
+
+**禁止的實作**：Buy Now / Apply Now / Checkout / Payment / 投保申請 / 立即成交 / 保單簽訂。
+
+**允許的商業閉環上限**：Contact / Referral / Introduction —— 使用者留下聯絡方式，
+平台把請求轉交合適的持牌保險人士，然後**平台停止**。
+
+**可驗證的失敗**：`src/components/contact-professional-modal.tsx` 的按鈕文字是「請求聯絡」，
+提交後的提示是「Prototype：正式版本将根据用户同意，把联系请求转交适当的持牌保险专业人士。」，
+並在表單上方常駐聲明「平台不會完成保險交易」。
+
+**對應頁面**：`/commercial-transparency`（商業透明度）
+
+---
+
+## F3. SOURCE BEFORE CLAIM
+
+**Source before claim.**
+
+任何被主張的事實，都必須先有出處。沒有來源的事實不上線；有來源但未核實的事實，
+必須帶著「尚未核實」狀態出現，而不是被當成確定結論。
+
+**可驗證的失敗**：`src/data/evidence.ts` 的 `extractProductEvidence()` 只會為帶有 `sourceIds`
+的欄位產生 `Evidence`；`hasTraceableEvidence()` 在找不到可解析來源時回傳 `false`，
+UI 因此顯示「尚未有來源」而不是給出一個假的連結。
+
+**原型資料的硬性要求**：任何原型模擬資料必須顯示
+「原型模擬資料 — 尚未連接真實官方來源」（`DemoDataNotice`）。
+**絕對不能製造假的官方 PDF、假的發布者或假的頁碼引用。**
+
+---
+
+## F4. USER DECIDES
+
+**User decides.**
+
+平台解釋結構、揭露差異、指出需要問的問題，**但不替使用者做決定**。
+
+**禁止的實作**：「最適合你」「第一名」「保證最划算」「性價比之王」「編輯精選」。
+
+**允許的實作**：解釋差異從哪裡來、這個差異對你的實務影響、還有甚麼需要確認。
+
+**使用者的路徑**：Search → Understand → Verify → Compare → Decide。
+若使用者想找專業人士：Decide → Request Contact → Licensed Professional，
+之後**平台停止**，不進入交易。
+
+**對應頁面**：`/trust`（信任中心）
 
 ---
 

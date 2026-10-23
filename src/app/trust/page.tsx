@@ -72,6 +72,7 @@ const SECTIONS = [
       "平台可能與保險公司或服務提供者建立商業合作。原則是：合作可以影響合作的形式與時程，但不能改變資料本身。",
       "具體來說：保費、限額、等待期、續保條款、不保事項與核實狀態，都不會因為商業關係而調整。任何付費合作都會在相關頁面明確披露，且不會以「排序較前」作為合作條件。",
       "如果我們的客觀資料與商業利益之間出現無法調和的衝突，選項是取消合作，而不是修改資料。",
+      "在實作層面，自然結果與付費結果由不同的排序邏輯處理：付費結果不會被放進自然結果佇列，也不會參與自然排序計分。詳見「搜索與比較結果如何排序？」與「商業透明度」兩頁。",
     ],
   },
   {
@@ -203,6 +204,41 @@ export default function TrustPage() {
           );
         })}
       </div>
+
+      {/* Transparency sub-pages */}
+      <section className="mt-11">
+        <h2 className="text-[19px] font-semibold tracking-tight text-ink">
+          信任中心：更多公開文件
+        </h2>
+        <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-soft">
+          信任中心不是單一頁，而是同一套原則在不同題目上的展開。以下兩頁分別處理
+          「結果如何排序」與「平台如何維生」——這兩件事最容易被混為一談，所以特別公開。
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Link
+            href="/ranking-methodology"
+            className="group rounded-xl border border-ink-line bg-white p-4 hover:border-brand-300 hover:bg-brand-50/40"
+          >
+            <span className="text-[14.5px] font-semibold text-ink group-hover:text-brand-700">
+              搜索與比較結果如何排序？
+            </span>
+            <span className="mt-1 block text-[12.5px] text-ink-mute">
+              自然結果的五個排序因素、比較頁不排序的理由，以及「商業合作不會直接購買自然搜索排名」的說明
+            </span>
+          </Link>
+          <Link
+            href="/commercial-transparency"
+            className="group rounded-xl border border-ink-line bg-white p-4 hover:border-brand-300 hover:bg-brand-50/40"
+          >
+            <span className="text-[14.5px] font-semibold text-ink group-hover:text-brand-700">
+              商業透明度
+            </span>
+            <span className="mt-1 block text-[12.5px] text-ink-mute">
+              平台如何維生、甚麼是贊助內容、諮詢轉介如何運作，以及平台為何不會完成保險交易
+            </span>
+          </Link>
+        </div>
+      </section>
 
       {/* Links */}
       <section className="mt-11 grid gap-3 sm:grid-cols-2">

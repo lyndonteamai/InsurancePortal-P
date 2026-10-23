@@ -25,6 +25,7 @@ import { products } from "@/data/products";
 import { insurerMap } from "@/data/insurers";
 import { CATEGORY_LABELS, type ProductCategory } from "@/data/types";
 import { CompareButton } from "@/components/compare-button";
+import { ContactProfessional } from "@/components/contact-professional-modal";
 
 type Option = { id: string; label: string; desc?: string };
 
@@ -221,6 +222,20 @@ export function NeedsWizard() {
                 ))}
               </ul>
             </section>
+
+            {/* 需要持牌人士進一步解釋 */}
+            <ContactProfessional
+              variant="panel"
+              context={{
+                from: "needs-analysis",
+                productIds: result.products.map((p) => p.id),
+                productNames: result.products.map((p) => p.name),
+                category: result.products[0]?.category ?? "general",
+                question: result.termsToCompare[0]
+                  ? `我想先問清楚：${result.termsToCompare[0]}`
+                  : undefined,
+              }}
+            />
 
             {/* 產品 */}
             <section className="rounded-xl border border-ink-line bg-white p-5">

@@ -19,6 +19,11 @@ export type AnalyticsEventName =
   | "ask_submit"
   | "insurer_view"
   | "report_issue"
+  | "source_open"
+  | "evidence_open"
+  | "contact_request_open"
+  | "contact_request_submit"
+  | "sponsored_impression"
   | "conversion_click";
 
 export type AnalyticsPayload = Record<string, string | number | boolean | null>;
@@ -103,5 +108,10 @@ export const ANALYTICS_EVENT_LABELS: Record<AnalyticsEventName, string> = {
   ask_submit: "提交問題",
   insurer_view: "保險公司頁瀏覽",
   report_issue: "回報資料問題",
+  source_open: "查看產品欄位來源",
+  evidence_open: "查看比較項目證據",
+  contact_request_open: "開啟聯絡持牌人士表單",
+  contact_request_submit: "提交聯絡請求",
+  sponsored_impression: "曝光贊助結果",
   conversion_click: "點擊轉介連結",
 };

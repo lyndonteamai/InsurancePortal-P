@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Search, Sparkles, BookOpen, Package, HelpCircle, Layers, ArrowRight } from "lucide-react";
 import { composeAnswer, askSuggestions, ASK_KIND_LABELS } from "@/lib/ask-engine";
+import { Database, Scale, FileText, ShieldCheck } from "lucide-react";
 import type { AskSourceKind } from "@/lib/ask-engine";
 import { trackEvent } from "@/lib/analytics";
 
@@ -60,16 +61,21 @@ export function AskEngine() {
           首頁
         </Link>
         <span className="mx-1.5">/</span>
-        <span className="text-ink-soft">問保險問題</span>
+        <span className="text-ink-soft">問保險 AI</span>
       </nav>
 
       <header className="mt-3">
         <h1 className="text-[28px] font-bold tracking-tight text-ink sm:text-[32px]">
-          問保險問題
+          問保險 AI
         </h1>
         <p className="mt-2 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft">
-          用一句話問你想知道的保險概念。這個引擎會從平台資料庫中找出最相關的
-          條目、術語與產品資料，並附上來源連結。
+          用一句話問你想知道的保險概念。回答固定分成五段：簡單答案、相關產品、
+          相關條款、官方來源、進一步比較。所有產品數字都來自平台資料庫，
+          並標明根據哪些資料。
+        </p>
+        <p className="mt-2 max-w-2xl text-[12.5px] leading-relaxed text-ink-mute">
+          這個引擎回答的是「甚麼是甚麼」與「有甚麼差別」。它不會告訴你該買哪一份，
+          也不會替你完成任何投保程序。
         </p>
       </header>
 
@@ -145,13 +151,28 @@ export function AskEngine() {
       {answer && (
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
           <div>
+            {/* 段 1：簡單答案 */}
             <div className="rounded-xl border-l-4 border-brand-700 bg-brand-50/70 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-700">
-                直接回答
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-700">
+                <Sparkles size={12} aria-hidden />
+                簡單答案
               </p>
               <p className="mt-2 text-[15.5px] leading-relaxed text-ink">
-                {answer.direct}
+                {answer.simpleAnswer ?? answer.direct}
               </p>
+              {answer.groundedOn && answer.groundedOn.length > 0 && (
+                <p className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-brand-200/70 pt-3 text-[11.5px] text-brand-900/75">
+                  <Database size={11} aria-hidden />
+                  這個回答根據平台資料庫的
+                  {answer.groundedOn.map((g, i) => (
+                    <span key={g.entity}>
+                      {i > 0 && "、"}
+                      <span className="font-medium">{g.count} 項{g.entity}</span>
+                    </span>
+                  ))}
+                  組成，沒有使用平台以外的推測。
+                </p>
+              )}
             </div>
 
             {answer.detail.length > 0 && (
@@ -203,6 +224,82 @@ export function AskEngine() {
                     );
                   })}
                 </ul>
+              </div>
+            )}
+
+            {/* 段 4：官方來源 */}
+            {answer.officialSources && answer.officialSources.length > 0 && (
+              <div className="mt-5 rounded-xl border border-ink-line bg-white p-5">
+                <h2 className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+                  <FileText size={15} className="text-brand-600" aria-hidden />
+                  官方來源
+                </h2>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-soft">
+                  這個回答所引用的文件。這些是平台資料庫內登記的來源，
+                  不是由 AI 生成的內容。
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {answer.officialSources.map((src) => (
+                    <li
+                      key={src.id}
+                      className="rounded-lg border border-ink-line bg-paper px-3.5 py-2.5"
+                    >
+                      <p className="text-[13px] font-medium text-ink">{src.title}</p>
+                      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-ink-mute">
+                        <span>{src.publisher}</span>
+                        <span className="rounded bg-white px-1.5 py-0.5 font-medium text-ink-soft">
+                          {src.type}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-medium text-violet-800">
+                          <ShieldCheck size={9} aria-hidden />
+                          {src.verificationStatus === "demo"
+                            ? "原型模擬資料"
+                            : src.verificationStatus === "verified"
+                              ? "已核實"
+                              : src.verificationStatus === "partially_verified"
+                                ? "部分核實"
+                                : "尚未核實"}
+                        </span>
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 段 5：進一步比較 */}
+            {answer.nextComparisons && answer.nextComparisons.length > 0 && (
+              <div className="mt-5 rounded-xl border border-brand-100 bg-brand-50/50 p-5">
+                <h2 className="flex items-center gap-2 text-[15px] font-semibold text-brand-900">
+                  <Scale size={15} aria-hidden />
+                  進一步比較
+                </h2>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-brand-900/75">
+                  下一步可以做甚麼。平台不會替你決定，但可以把比較的入口放在這裡。
+                </p>
+                <div className="mt-3 space-y-2">
+                  {answer.nextComparisons.map((c) => (
+                    <Link
+                      key={c.label}
+                      href={c.href}
+                      className="group flex items-start gap-3 rounded-lg border border-brand-100 bg-white px-3.5 py-3 hover:border-brand-300"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13.5px] font-medium text-ink group-hover:text-brand-700">
+                          {c.label}
+                        </span>
+                        <span className="mt-0.5 block text-[12px] leading-relaxed text-ink-mute">
+                          {c.note}
+                        </span>
+                      </span>
+                      <ArrowRight
+                        size={14}
+                        className="mt-0.5 shrink-0 text-ink-mute group-hover:text-brand-700"
+                        aria-hidden
+                      />
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -4,6 +4,8 @@ import { faqs } from "@/data/faqs";
 import { dictionary } from "@/data/dictionary";
 import { hubs } from "@/data/hubs";
 import { tokenize, matchScore } from "./search";
+import { globalSources } from "@/data/sources";
+import { SOURCE_TYPE_LABELS } from "@/data/types";
 
 // ============================================================
 // 問保險問題引擎 (/ask)
@@ -31,6 +33,22 @@ export type AskSource = {
   score: number;
 };
 
+/**
+ * 保險 Copilot 的回答結構。
+ *
+ * 五個段落是刻意設計的未來 LLM 接入介面：
+ *
+ *   1. simpleAnswer  簡單答案      —— 一句話回答問題
+ *   2. relatedProducts 相關產品    —— 這個概念涉及哪些產品
+ *   3. relatedTerms  相關條款      —— 涉及哪些條款概念
+ *   4. officialSources 官方來源    —— 答案根據哪些文件
+ *   5. nextComparisons 進一步比較  —— 建議下一步比較甚麼
+ *
+ * 最重要的一條規則：**答案必須以平台結構化資料為基礎**。
+ * 未來接 LLM 時，產品保障數字必須從 verifiedData 取得，
+ * 不能讓模型憑記憶生成。這是 Grounded in Platform Data 的架構保證：
+ * 資料來源是獨立的欄位，UI 會把它呈現給使用者查證。
+ */
 export type AskAnswer = {
   /** 直接回答（一句話） */
   direct: string;
@@ -44,6 +62,23 @@ export type AskAnswer = {
   relatedTerms: { slug: string; zh: string; term: string }[];
   /** 是否找到答案 */
   found: boolean;
+
+  // ---------- Copilot 結構（V3）----------
+  /** 段 1：簡單答案 */
+  simpleAnswer?: string;
+  /** 段 4：官方來源（來自來源註冊表，不是 LLM 生成） */
+  officialSources?: {
+    id: string;
+    title: string;
+    publisher: string;
+    type: string;
+    verificationStatus: string;
+    href?: string;
+  }[];
+  /** 段 5：建議下一步比較甚麼 */
+  nextComparisons?: { label: string; href: string; note: string }[];
+  /** 回答所依據的平台資料（Grounded in Platform Data 的證明） */
+  groundedOn?: { entity: string; count: number }[];
 };
 
 export const ASK_KIND_LABELS: Record<AskSourceKind, string> = {
@@ -185,6 +220,21 @@ export function composeAnswer(query: string): AskAnswer {
       relatedProducts: [],
       relatedTerms: [],
       found: false,
+      simpleAnswer: `平台資料庫內目前沒有關於「${q}」的條目。`,
+      officialSources: [],
+      nextComparisons: [
+        {
+          label: "瀏覽保險術語字典",
+          href: "/dictionary",
+          note: "常見保險概念的一句話答案與比較重點",
+        },
+        {
+          label: "前往問保險 AI",
+          href: `/ask?q=${encodeURIComponent(q)}`,
+          note: "換個說法再問一次",
+        },
+      ],
+      groundedOn: [],
     };
   }
 
@@ -258,6 +308,98 @@ export function composeAnswer(query: string): AskAnswer {
     .slice(0, 5)
     .map((t) => ({ slug: t.slug, zh: t.zh, term: t.term }));
 
+  // ---------- Copilot 段 4：官方來源 ----------
+  // 來源必須來自平台的來源註冊表，而不是模型生成。
+  // 這是 Grounded in Platform Data 的實作。
+  const matchedSourceIds = new Set<string>();
+  for (const rp of relatedProducts) {
+    const prod = products.find((x) => x.id === rp.id);
+    prod?.sourceDocuments.forEach((sd) => matchedSourceIds.add(sd.id));
+  }
+  if (term) term.sourceIds?.forEach((id) => matchedSourceIds.add(id));
+  if (article) article.sourceIds?.forEach((id) => matchedSourceIds.add(id));
+  // Hub 段落目前沒有綁定來源（類型中尚未定義 sourceIds），
+  // 因此不從 Hub 取來源 —— 寧可少列來源，不可虛構來源。
+
+  const officialSources = [
+    ...globalSources
+      .filter((s) => matchedSourceIds.has(s.id))
+      .map((s) => ({
+        id: s.id,
+        title: s.title,
+        publisher: s.publisher,
+        type: SOURCE_TYPE_LABELS[s.type],
+        verificationStatus: s.verificationStatus ?? "demo",
+        href: s.url ?? undefined,
+      })),
+    ...relatedProducts
+      .map((rp) => products.find((x) => x.id === rp.id))
+      .filter(Boolean)
+      .flatMap((prod) => prod!.sourceDocuments)
+      .filter((sd) => !globalSources.some((g) => g.id === sd.id))
+      .slice(0, 4)
+      .map((sd) => ({
+        id: sd.id,
+        title: sd.title,
+        publisher: sd.publisher,
+        type: SOURCE_TYPE_LABELS[sd.type],
+        verificationStatus: sd.verificationStatus ?? "demo",
+        href: sd.url ?? undefined,
+      })),
+  ].slice(0, 6);
+
+  // ---------- Copilot 段 5：進一步比較 ----------
+  const nextComparisons: { label: string; href: string; note: string }[] = [];
+  if (relatedProducts.length >= 2) {
+    nextComparisons.push({
+      label: `比較 ${relatedProducts.length} 款相關產品的條款`,
+      href: "/compare",
+      note: "逐項對照自付額、等候期、續保與保障額度，每個數值都可追問來源",
+    });
+  }
+  if (relatedTerms.length) {
+    nextComparisons.push({
+      label: `深入了解：${relatedTerms[0].zh}`,
+      href: `/dictionary/${relatedTerms[0].slug}`,
+      note: "這個概念的完整解釋、比較重點與常見誤解",
+    });
+  }
+  if (top.kind === "term" && term) {
+    const involving = products.filter((p) =>
+      p.coverage.some((c) => c.name.includes(term.zh)),
+    );
+    if (involving.length >= 2) {
+      nextComparisons.push({
+        label: `比較涉及「${term.zh}」的產品`,
+        href: "/products",
+        note: `${involving.length} 款產品在條款中涉及這個概念`,
+      });
+    }
+  }
+  if (!nextComparisons.length) {
+    nextComparisons.push({
+      label: "瀏覽保險產品",
+      href: "/products",
+      note: "按類別查看可比較的產品與其資料完整度",
+    });
+  }
+
+  // ---------- Grounded on：這個回答依據了平台哪些資料 ----------
+  const groundedOn: { entity: string; count: number }[] = [];
+  if (relatedProducts.length) {
+    groundedOn.push({ entity: "保險產品", count: relatedProducts.length });
+  }
+  if (relatedTerms.length) {
+    groundedOn.push({ entity: "保險術語", count: relatedTerms.length });
+  }
+  const articleHits = results.filter((r) => r.kind === "article").length;
+  if (articleHits) groundedOn.push({ entity: "知識文章", count: articleHits });
+  const faqHits = results.filter((r) => r.kind === "faq").length;
+  if (faqHits) groundedOn.push({ entity: "常見問題", count: faqHits });
+  if (officialSources.length) {
+    groundedOn.push({ entity: "來源文件", count: officialSources.length });
+  }
+
   return {
     direct,
     detail,
@@ -273,6 +415,10 @@ export function composeAnswer(query: string): AskAnswer {
             term: dictionary.find((t) => t.zh === zh)?.term ?? "",
           })),
     found: true,
+    simpleAnswer: direct,
+    officialSources,
+    nextComparisons,
+    groundedOn,
   };
 }
 

@@ -19,13 +19,14 @@ const UPDATED = "2026-01-20";
 
 /** 產生產品內嵌的條款來源 */
 function terms(
+  productId: string,
   insurer: string,
   code: string,
   version: string,
   publishedAt: string,
 ): SourceDocument {
   return {
-    id: `src-${code}-terms`,
+    id: `src-${productId}-terms`,
     title: `${insurer}《${code}》保單條款`,
     type: "policy_terms",
     publisher: insurer,
@@ -35,17 +36,28 @@ function terms(
     locator: "全文",
     isPrototype: true,
     note: "原型示範：實際環境應附上條款 PDF 的公開連結。",
+    // ---------- Source-First 擴充欄位 ----------
+    documentVersion: version,
+    effectiveDate: publishedAt,
+    retrievedDate: "2026-01-15",
+    lastReviewedDate: REVIEWED,
+    section: "保單條款全文",
+    quoteOrReference: `《${code}》保單條款 — ${version} 版，條款自 ${publishedAt} 起生效。`,
+    verificationStatus: "demo",
+    acquisitionMethod: "official_upload",
+    extractionState: "reviewed",
   };
 }
 
 function sheet(
+  productId: string,
   insurer: string,
   code: string,
   version: string,
   publishedAt: string,
 ): SourceDocument {
   return {
-    id: `src-${code}-sheet`,
+    id: `src-${productId}-sheet`,
     title: `${insurer}《${code}》產品小冊子`,
     type: "product_sheet",
     publisher: insurer,
@@ -55,6 +67,17 @@ function sheet(
     locator: "保障摘要表",
     isPrototype: true,
     note: "原型示範：此類來源用於交叉核對條款與小冊子的數字是否一致。",
+    // ---------- Source-First 擴充欄位 ----------
+    documentVersion: version,
+    effectiveDate: publishedAt,
+    retrievedDate: "2026-01-15",
+    lastReviewedDate: REVIEWED,
+    pageNumber: "第 2 – 3 頁",
+    section: "保障摘要表",
+    quoteOrReference: `${insurer}《${code}》產品小冊子 — ${version}，保障摘要表列明各項保障額度。`,
+    verificationStatus: "demo",
+    acquisitionMethod: "official_upload",
+    extractionState: "reviewed",
   };
 }
 
@@ -202,8 +225,8 @@ export const productHsMed01: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("港盾保險", "守望住院醫療", "v3.2", "2025-10-01"),
-    sheet("港盾保險", "守望住院醫療", "2025 年版", "2025-10-01"),
+    terms("hs-med-01", "港盾保險", "守望住院醫療", "v3.2", "2025-10-01"),
+    sheet("hs-med-01", "港盾保險", "守望住院醫療", "2025 年版", "2025-10-01"),
   ],
   verification: {
     status: "verified",
@@ -341,8 +364,8 @@ export const productHsMed02: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("港盾保險", "全包住院及門診", "v2.8", "2025-08-15"),
-    sheet("港盾保險", "全包住院及門診", "2025 年版", "2025-08-15"),
+    terms("hs-med-02", "港盾保險", "全包住院及門診", "v2.8", "2025-08-15"),
+    sheet("hs-med-02", "港盾保險", "全包住院及門診", "2025 年版", "2025-08-15"),
   ],
   verification: {
     status: "partially_verified",
@@ -447,7 +470,11 @@ export const productHsLife01: InsuranceProduct = {
         "若選擇續保，保費會按屆時年齡重新定價，通常明顯高於原本年齡的保費。",
     },
   ],
-  sourceDocuments: [terms("港盾保險", "定年定期人壽", "v1.9", "2025-06-01")],
+
+  sourceDocuments: [
+    terms("hs-life-01", "港盾保險", "定年定期人壽", "v2.4", "2025-07-15"),
+    sheet("hs-life-01", "港盾保險", "定年定期人壽", "2025 年版", "2025-07-15"),
+  ],
   verification: {
     status: "unverified",
     lastReviewedAt: "2026-01-05",
@@ -597,8 +624,8 @@ export const productMlCi01: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("楓葉人壽", "守護危疾", "v4.1", "2025-09-01"),
-    sheet("楓葉人壽", "守護危疾", "2025 年版", "2025-09-01"),
+    terms("ml-ci-01", "楓葉人壽", "守護危疾", "v4.1", "2025-09-01"),
+    sheet("ml-ci-01", "楓葉人壽", "守護危疾", "2025 年版", "2025-09-01"),
   ],
   verification: {
     status: "verified",
@@ -715,8 +742,8 @@ export const productMlCi02: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("楓葉人壽", "多重危疾", "v1.4", "2025-11-01"),
-    sheet("楓葉人壽", "多重危疾", "2025 年版", "2025-11-01"),
+    terms("ml-ci-02", "楓葉人壽", "多重危疾", "v1.4", "2025-11-01"),
+    sheet("ml-ci-02", "楓葉人壽", "多重危疾", "2025 年版", "2025-11-01"),
   ],
   verification: {
     status: "partially_verified",
@@ -832,8 +859,8 @@ export const productMlLife01: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("楓葉人壽", "長願終身人壽", "v5.0", "2025-07-01"),
-    sheet("楓葉人壽", "長願終身人壽", "2025 年版", "2025-07-01"),
+    terms("ml-life-01", "楓葉人壽", "長願終身人壽", "v5.0", "2025-07-01"),
+    sheet("ml-life-01", "楓葉人壽", "長願終身人壽", "2025 年版", "2025-07-01"),
   ],
   verification: {
     status: "verified",
@@ -952,8 +979,8 @@ export const productBcMed01: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("明康護理", "康健門診住院", "v3.0", "2025-09-20"),
-    sheet("明康護理", "康健門診住院", "2025 年版", "2025-09-20"),
+    terms("bc-med-01", "明康護理", "康健門診住院", "v3.0", "2025-09-20"),
+    sheet("bc-med-01", "明康護理", "康健門診住院", "2025 年版", "2025-09-20"),
   ],
   verification: {
     status: "verified",
@@ -976,6 +1003,22 @@ export const productBcMed02: InsuranceProduct = {
   insurerId: "brightcare",
   category: "medical",
   tagline: "基本住院保障，門診保障有限",
+  /**
+   * 原型示範：這個產品被標示為「贊助曝光」，
+   * 用來展示搜索結果頁的付費區與自然區是分離的。
+   *
+   * 規則（不可動搖）：
+   *   1. 帶這個標記的產品**不會**出現在自然結果排序裡。
+   *   2. 它只會出現在獨立的「贊助結果」區，並附「贊助」徽章。
+   *   3. 正式環境中任何付費曝光都必須如此標示。
+   *   4. 這個標記不影響產品的核實狀態、資料完整度或比較結果。
+   */
+  sponsored: {
+    isSponsored: true,
+    sponsorName: "明康保險（原型示範）",
+    relationship: "原型示範用的付費曝光位置，並非真實商業合作",
+    excludedFromOrganicRanking: true,
+  },
   description:
     "明康的入門住院方案，住院保障額與門診範圍都較低，保費相對便宜。適合已有公司團體醫療保險、只需要住院風險墊底的在職人士。",
   eligibility: {
@@ -1062,7 +1105,11 @@ export const productBcMed02: InsuranceProduct = {
         "每日病房 HK$6,000 加上每次住院 HK$8,000 自付額，實際保障起點不算低，需要用實際住院情境估算。",
     },
   ],
-  sourceDocuments: [terms("明康護理", "銀卡住院", "v1.6", "2025-05-10")],
+
+  sourceDocuments: [
+    terms("bc-med-02", "明康護理", "銀卡住院保障", "v2.1", "2025-06-10"),
+    sheet("bc-med-02", "明康護理", "銀卡住院保障", "2025 年版", "2025-06-10"),
+  ],
   verification: {
     status: "demo",
     lastReviewedAt: "2025-12-18",
@@ -1170,7 +1217,11 @@ export const productBcCi01: InsuranceProduct = {
         "「早期」在不同條款裏指不同的事。例如某個計劃只賠原位癌，另一個可能賠第 1 期，兩者保費差距遠大於保額差距。",
     },
   ],
-  sourceDocuments: [terms("明康護理", "早期危疾", "v1.1", "2025-04-01")],
+
+  sourceDocuments: [
+    terms("bc-ci-01", "明康護理", "早期危疾保障", "v1.9", "2025-10-20"),
+    sheet("bc-ci-01", "明康護理", "早期危疾保障", "2025 年版", "2025-10-20"),
+  ],
   verification: {
     status: "unverified",
     lastReviewedAt: "2025-12-20",
@@ -1277,8 +1328,8 @@ export const productPaLife01: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("先驅保險", "家安家庭人壽", "v2.3", "2025-08-01"),
-    sheet("先驅保險", "家安家庭人壽", "2025 年版", "2025-08-01"),
+    terms("pa-life-01", "先驅保險", "家安家庭人壽", "v2.3", "2025-08-01"),
+    sheet("pa-life-01", "先驅保險", "家安家庭人壽", "2025 年版", "2025-08-01"),
   ],
   verification: {
     status: "partially_verified",
@@ -1398,8 +1449,8 @@ export const productPaTravel01: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("先驅保險", "暢遊旅遊", "v3.2", "2025-10-01"),
-    sheet("先驅保險", "暢遊旅遊", "2025 年版", "2025-10-01"),
+    terms("pa-travel-01", "先驅保險", "暢遊旅遊", "v3.2", "2025-10-01"),
+    sheet("pa-travel-01", "先驅保險", "暢遊旅遊", "2025 年版", "2025-10-01"),
   ],
   verification: {
     status: "verified",
@@ -1516,7 +1567,11 @@ export const productPaTravel02: InsuranceProduct = {
         "車損自付額 HK$20,000 高於整份保單保費，這是旅遊保險中常見的結構，特價行程更要看清楚。",
     },
   ],
-  sourceDocuments: [terms("先驅保險", "自駕跨境旅遊", "v1.3", "2025-12-01")],
+
+  sourceDocuments: [
+    terms("pa-travel-02", "先驅保險", "自駕跨境旅遊", "v1.6", "2025-05-30"),
+    sheet("pa-travel-02", "先驅保險", "自駕跨境旅遊", "2025 年版", "2025-05-30"),
+  ],
   verification: {
     status: "demo",
     lastReviewedAt: "2025-12-22",
@@ -1635,7 +1690,11 @@ export const productPaHome01: InsuranceProduct = {
         "家居保險的自付額通常不高，但水浸等事故的頻率取決於住所狀況，例如是否靠近水管、是否在低層。",
     },
   ],
-  sourceDocuments: [terms("先驅保險", "安居家居", "v1.8", "2025-07-15")],
+
+  sourceDocuments: [
+    terms("pa-home-01", "先驅保險", "安居家居綜合", "v2.0", "2025-04-18"),
+    sheet("pa-home-01", "先驅保險", "安居家居綜合", "2025 年版", "2025-04-18"),
+  ],
   verification: {
     status: "unverified",
     lastReviewedAt: "2025-12-26",
@@ -1744,8 +1803,8 @@ export const productPaSavings01: InsuranceProduct = {
     },
   ],
   sourceDocuments: [
-    terms("先驅保險", "長積儲蓄退休", "v2.1", "2025-06-20"),
-    sheet("先驅保險", "長積儲蓄退休", "2025 年版", "2025-06-20"),
+    terms("pa-savings-01", "先驅保險", "長積儲蓄退休", "v2.1", "2025-06-20"),
+    sheet("pa-savings-01", "先驅保險", "長積儲蓄退休", "2025 年版", "2025-06-20"),
   ],
   verification: {
     status: "partially_verified",
@@ -1856,7 +1915,11 @@ export const productHsMotor01: InsuranceProduct = {
         "同一部車、同一個人，續保時保費可能相差數倍。比較車險時，重點是續保機制而非單一保費數字。",
     },
   ],
-  sourceDocuments: [terms("港盾保險", "安途私家車", "v1.2", "2025-11-01")],
+
+  sourceDocuments: [
+    terms("hs-motor-01", "港盾保險", "安途私家車", "v3.0", "2025-09-12"),
+    sheet("hs-motor-01", "港盾保險", "安途私家車", "2025 年版", "2025-09-12"),
+  ],
   verification: {
     status: "demo",
     lastReviewedAt: "2025-12-30",

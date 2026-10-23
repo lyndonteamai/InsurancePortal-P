@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dictionary, getTerm } from "@/data/dictionary";
-import { getProduct } from "@/data/products";
-import { articles } from "@/data/articles";
+import {
+  relationsForTerm,
+  productsForTermSlug,
+  articlesForTermSlug,
+} from "@/lib/relationships";
 import {
   pageMetadata,
   definedTermJsonLd,
@@ -42,20 +45,11 @@ export default async function TermPage({
   const t = getTerm(term);
   if (!t) notFound();
 
-  const relatedTerms = t.relatedTerms
-    .map((name) => dictionary.find((x) => x.term === name || x.zh === name))
-    .filter(Boolean)
-    .slice(0, 6);
-
-  const relatedProducts = t.relatedProductIds
-    .map((id) => getProduct(id))
-    .filter(Boolean)
-    .slice(0, 3);
-
-  const relatedArticles = t.relatedArticleSlugs
-    .map((slug) => articles.find((a) => a.slug === slug))
-    .filter(Boolean)
-    .slice(0, 3);
+  // 相關內容由關係引擎推導
+  const relations = relationsForTerm(t);
+  const relatedTerms = relations.terms.slice(0, 6);
+  const relatedProducts = productsForTermSlug(t.slug).slice(0, 3);
+  const relatedArticles = articlesForTermSlug(t.slug).slice(0, 3);
 
   const definedTermLd = definedTermJsonLd({
     term: t.term,

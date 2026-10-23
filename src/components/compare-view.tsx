@@ -14,6 +14,7 @@ import {
   Layers,
   ListChecks,
   MessageSquareQuote,
+  Quote,
 } from "lucide-react";
 import { useCompare, MAX_COMPARE_ITEMS } from "@/lib/compare-context";
 import { products } from "@/data/products";
@@ -31,6 +32,9 @@ import {
   MISSING_DATA,
   sameCategory,
 } from "@/lib/compare-insights";
+import { SourceDrawer, useSourceDrawer, DemoDataNotice } from "./source-drawer";
+import { ContactProfessional } from "./contact-professional-modal";
+import { resolveEvidenceSources } from "@/data/evidence";
 
 // ============================================================
 // 比較引擎 V2 — 四個層次
@@ -76,6 +80,12 @@ export function CompareView() {
   const { ids, count, remove, clear } = useCompare();
   const [tab, setTab] = useState<Tab>("quick");
   const [openHelp, setOpenHelp] = useState<string | null>(null);
+  // Evidence-Based Comparison：比較表的每個數值都可打開證據面板
+  const {
+    drawerState: evidenceState,
+    openDrawer: openEvidenceDrawer,
+    closeDrawer: closeEvidenceDrawer,
+  } = useSourceDrawer();
 
   const selected = useMemo(
     () =>
@@ -365,6 +375,17 @@ export function CompareView() {
       {/* ---------------- Level 2: 完整比較表 ---------------- */}
       {tab === "full" && (
         <section className="mt-5">
+          {/* Evidence-Based Comparison 說明 */}
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-brand-100 bg-brand-50/50 px-3.5 py-2.5">
+            <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-brand-900">
+              <Quote size={13} aria-hidden />
+              每個數值都可以追問來源
+            </p>
+            <p className="text-[12.5px] leading-relaxed text-brand-900/75">
+              比較表裡每個數值旁的「查看證據」會打開證據面板，顯示它來自哪份文件、
+              哪個版本、哪一頁，以及最後一次人工審核的日期。
+            </p>
+          </div>
           <div className="overflow-x-auto rounded-xl border border-ink-line bg-white">
             <table className="w-full min-w-[820px] border-collapse text-left">
               <thead>
@@ -430,29 +451,59 @@ export function CompareView() {
                           </span>
                         )}
                       </th>
-                      {row.values.map((v, i) => (
-                        <td
-                          key={selected[i].id + row.label}
-                          className="px-4 py-3.5"
-                        >
-                          {v === null || v === "" ? (
-                            <span className="text-[13px] italic text-ink-mute">
-                              {MISSING_DATA}
-                            </span>
-                          ) : (
-                            <span
-                              className={`text-[13px] leading-relaxed ${
-                                row.differs ? "font-medium text-ink" : "text-ink-soft"
-                              }`}
-                            >
-                              {v}
-                            </span>
-                          )}
-                          {row.differs && (
-                            <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-accent-500 align-middle" />
-                          )}
-                        </td>
-                      ))}
+                      {row.values.map((v, i) => {
+                        const ev = row.evidences?.[i] ?? null;
+                        return (
+                          <td
+                            key={selected[i].id + row.label}
+                            className="px-4 py-3.5"
+                          >
+                            {v === null || v === "" ? (
+                              <span className="text-[13px] italic text-ink-mute">
+                                {MISSING_DATA}
+                              </span>
+                            ) : (
+                              <span
+                                className={`text-[13px] leading-relaxed ${
+                                  row.differs ? "font-medium text-ink" : "text-ink-soft"
+                                }`}
+                              >
+                                {v}
+                              </span>
+                            )}
+                            {row.differs && (
+                              <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-accent-500 align-middle" />
+                            )}
+                            {/* Evidence-Based Comparison：任何一個數值都可以追問來源 */}
+                            {row.evidences && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const product = selected[i];
+                                  const sources = ev
+                                    ? resolveEvidenceSources(ev, product)
+                                    : [];
+                                  openEvidenceDrawer({
+                                    evidence: ev ?? undefined,
+                                    product,
+                                    sources,
+                                    factLabel: row.label,
+                                    factValue: v ?? MISSING_DATA,
+                                  });
+                                  trackEvent("evidence_open", {
+                                    productId: product.id,
+                                    field: row.label,
+                                  });
+                                }}
+                                className="mt-1.5 inline-flex items-center gap-1 rounded border border-ink-line bg-white px-1.5 py-0.5 text-[10.5px] font-medium text-ink-soft transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1"
+                              >
+                                <Quote size={10} aria-hidden />
+                                {ev ? "查看證據" : "尚未有來源"}
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -463,6 +514,9 @@ export function CompareView() {
             小提示：手機版可以左右滑動表格查看全部欄位。綠色圓點代表該欄位在
             不同產品之間存在差異；斜體的「{MISSING_DATA}」代表平台尚未記錄該項資料。
           </p>
+          <div className="mt-3">
+            <DemoDataNotice />
+          </div>
         </section>
       )}
 
@@ -557,6 +611,33 @@ export function CompareView() {
         </section>
       )}
 
+      {/* ---------------- 需要持牌人士進一步解釋 ---------------- */}
+      {count >= 2 && (
+        <section className="mt-10">
+          <ContactProfessional
+            variant="panel"
+            context={{
+              from: "compare",
+              productIds: selected.map((p) => p.id),
+              productNames: selected.map((p) => p.name),
+              category: selected[0]?.category ?? "general",
+              question: questions[0]
+                ? `我想先問清楚：${questions[0]}`
+                : undefined,
+            }}
+          />
+          <p className="mt-2.5 text-[12px] leading-relaxed text-ink-mute">
+            平台只做轉介：你的請求會按同意轉交合適的持牌保險人士，由對方直接與你聯絡。
+            平台不會代你投保、不會收取保費，也不會完成任何保險交易。
+            詳見{" "}
+            <Link href="/commercial-transparency" className="text-brand-700 underline underline-offset-2 hover:text-brand-900">
+              商業透明度
+            </Link>
+            。
+          </p>
+        </section>
+      )}
+
       {/* Related reading */}
       <section className="mt-10">
         <h2 className="text-[18px] font-semibold tracking-tight text-ink">
@@ -582,6 +663,18 @@ export function CompareView() {
           ))}
         </div>
       </section>
+
+      {/* Evidence Drawer */}
+      <SourceDrawer
+        open={evidenceState !== null}
+        onClose={closeEvidenceDrawer}
+        evidence={evidenceState?.evidence}
+        product={evidenceState?.product}
+        sources={evidenceState?.sources}
+        factLabel={evidenceState?.factLabel}
+        factValue={evidenceState?.factValue}
+        title="比較證據"
+      />
     </div>
   );
 }

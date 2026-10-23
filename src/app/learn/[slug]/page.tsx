@@ -13,8 +13,7 @@ import {
   BookMarked,
 } from "lucide-react";
 import { articles } from "@/data/articles";
-import { products } from "@/data/products";
-import { dictionary } from "@/data/dictionary";
+import { relationsForArticle } from "@/lib/relationships";
 import { ProductCard } from "@/components/product-card";
 import { ReportIssueButton } from "@/components/report-issue-button";
 import { articleJsonLd, breadcrumbJsonLd, jsonLdScript } from "@/lib/structured-data";
@@ -48,15 +47,11 @@ export default async function ArticlePage({
   const article = articles.find((a) => a.slug === slug);
   if (!article) notFound();
 
-  const related = articles.filter(
-    (a) => article.relatedSlugs.includes(a.slug) && a.slug !== article.slug
-  );
-  const relatedProducts = products.filter((p) =>
-    article.relatedProductIds.includes(p.id),
-  );
-  const relatedTerms = dictionary.filter((t) =>
-    (article.relatedTerms ?? []).includes(t.slug),
-  );
+  // 相關內容由關係引擎推導
+  const relations = relationsForArticle(article);
+  const related = relations.articles;
+  const relatedProducts = relations.products;
+  const relatedTerms = relations.terms;
 
   return (
     <article className="container-page py-8">

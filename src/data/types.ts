@@ -103,6 +103,81 @@ export type SourceDocument = {
   /** 原型資料為 true；表示這份來源尚未真正公開 */
   isPrototype: boolean;
   note?: string;
+
+  // ---------- Source-First 擴充欄位（V3）----------
+  /** 文件版本號，例如「v3.2 / 2026-01 版」 */
+  documentVersion?: string;
+  /** 文件生效日期 */
+  effectiveDate?: string;
+  /** 平台取得／抽取此資料的日期 */
+  retrievedDate?: string;
+  /** 人工審核通過的日期 */
+  lastReviewedDate?: string;
+  /** 具體頁碼（PDF 條款常用） */
+  pageNumber?: string;
+  /** 章節標題（條款內的定位） */
+  section?: string;
+  /** 原文引用片段，用於逐字核對 */
+  quoteOrReference?: string;
+  /** 此來源本身的核實狀態 */
+  verificationStatus?: VerificationStatus;
+  /** 取得方式：人工上載 / 官方網站 / 提交 / AI 抽取 */
+  acquisitionMethod?: SourceAcquisitionMethod;
+  /** 資料抽取狀態：待抽取 / 已抽取 / 待審核 / 已審核 / 需重新審核 */
+  extractionState?: ExtractionState;
+};
+
+/** 來源取得方式（對應 Data Pipeline 的 SOURCE 階段） */
+export type SourceAcquisitionMethod =
+  | "official_website"
+  | "official_upload"
+  | "company_submission"
+  | "industry_data"
+  | "manual_entry";
+
+export const ACQUISITION_METHOD_LABELS: Record<SourceAcquisitionMethod, string> = {
+  official_website: "官方網站",
+  official_upload: "官方文件上載",
+  company_submission: "保險公司提交",
+  industry_data: "業界公開資料",
+  manual_entry: "人工填寫",
+};
+
+/** 資料抽取狀態（對應 EXTRACTION → HUMAN REVIEW 階段） */
+export type ExtractionState =
+  | "pending_extraction"
+  | "extracted"
+  | "pending_review"
+  | "reviewed"
+  | "needs_re_review";
+
+export const EXTRACTION_STATE_LABELS: Record<ExtractionState, string> = {
+  pending_extraction: "待抽取",
+  extracted: "已抽取",
+  pending_review: "待人工審核",
+  reviewed: "已人工審核",
+  needs_re_review: "需重新審核",
+};
+
+/**
+ * Evidence：把「一個產品事實」與「它的證據」綁在一起的最小單位。
+ * 產品頁的每個可核實欄位、比較表的每個數值，都應該對應一個 Evidence。
+ */
+export type Evidence = {
+  /** 證據的唯一 id */
+  id: string;
+  /** 這個事實對應的欄位名稱，例如「年度保障上限」 */
+  factLabel: string;
+  /** 事實的顯示值 */
+  factValue: string;
+  /** 指向來源文件的 id */
+  sourceIds: string[];
+  /** 該事實本身的核實狀態 */
+  verificationStatus: VerificationStatus;
+  /** 原文引用（若來源有提供） */
+  quoteOrReference?: string;
+  /** 審核備註 */
+  reviewerNote?: string;
 };
 
 // ---------- 覆蓋項目 / 不保事項 ----------
@@ -281,6 +356,19 @@ export type InsuranceProduct = {
     unverifiedFields?: string[];
   };
 
+  /**
+   * 欄位 → 證據的映射。key 是語意化的欄位名，value 是證據 id。
+   * 產品頁的「查看來源」按這個映射去查 evidence，再由 evidence 追到 source。
+   * 未在此登記的欄位，UI 不會假裝它有來源。
+   */
+  evidenceMap?: Record<string, string>;
+
+  /**
+   * 這個產品是否曾被標示為贊助曝光。
+   * 真實環境中任何付費曝光都必須如此標示，且永遠不能影響自然排序。
+   */
+  sponsored?: SponsoredMeta;
+
   /** 適用的付款方式 */
   paymentOptions?: string[];
   /** 條款生效年份（用於展示「條款版本」） */
@@ -288,6 +376,21 @@ export type InsuranceProduct = {
 
   updatedAt: string;
   isDemo: true;
+};
+
+/**
+ * 商業化關係的透明標記。
+ * 規則：付費曝光必須標示，且與自然排序分離。
+ */
+export type SponsoredMeta = {
+  /** 是否為贊助曝光 */
+  isSponsored: boolean;
+  /** 贊助方（原型階段為 null，表示未啟用） */
+  sponsorName?: string | null;
+  /** 商業關係說明 */
+  relationship?: string;
+  /** 贊助內容不參與自然排序的內部標記 */
+  excludedFromOrganicRanking?: boolean;
 };
 
 // ---------- 知識文章 ----------

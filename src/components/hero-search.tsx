@@ -3,16 +3,66 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight } from "lucide-react";
-import { searchAll, type SearchResult } from "@/lib/search";
+import { Search, ArrowRight, Sparkles } from "lucide-react";
+import {
+  searchAll,
+  isQuestionQuery,
+  findQuickAnswer,
+  type SearchResult,
+} from "@/lib/search";
 import { SEARCH_KIND_META } from "@/lib/search-ui";
 import { pushRecentSearch } from "./global-search";
+import { trackEvent } from "@/lib/analytics";
+
+// ============================================================
+// 首頁超級搜索
+// ============================================================
+// 一個搜索框覆蓋：產品 / 公司 / 類別 / 保障 / 條款 / 保費 /
+// 術語 / 文章 / FAQ / 比較 / AI 問答。
+//
+// 下拉面板的邏輯：
+//   · 輸入完整問題 → 先顯示「一句話答案」，再列延伸結果
+//   · 輸入關鍵詞   → 直接列結果，按類型分組
+// ============================================================
 
 export function HeroSearch() {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const router = useRouter();
   const results = useMemo(() => searchAll(query), [query]);
+
+  const isQuestion = useMemo(() => isQuestionQuery(query), [query]);
+  const quickAnswer = useMemo(
+    () => (isQuestion ? findQuickAnswer(query) : null),
+    [isQuestion, query],
+  );
+
+  // 下拉只顯示前 8 條，但按類型分散，避免全部被同一類霸佔
+  const topResults = useMemo(() => {
+    const organic = results.filter((r) => r.resultType === "organic");
+    const byKind = new Map<string, SearchResult[]>();
+    for (const r of organic) {
+      const arr = byKind.get(r.kind) ?? [];
+      arr.push(r);
+      byKind.set(r.kind, arr);
+    }
+    const out: SearchResult[] = [];
+    // 輪流各類別取，避免單一類別佔滿
+    let round = 0;
+    while (out.length < 8) {
+      let added = false;
+      for (const arr of byKind.values()) {
+        if (arr[round]) {
+          out.push(arr[round]);
+          added = true;
+          if (out.length >= 8) break;
+        }
+      }
+      if (!added) break;
+      round++;
+    }
+    return out;
+  }, [results]);
 
   const showPanel = focused && query.trim().length > 0;
 
@@ -21,11 +71,13 @@ export function HeroSearch() {
     const q = query.trim();
     if (!q) return;
     pushRecentSearch(q);
-    if (results.length > 0) {
-      router.push(results[0].href);
-    } else {
-      router.push(`/search?q=${encodeURIComponent(q)}`);
+    trackEvent("search_submit", { query: q, from: "hero" });
+    // 問題型查詢 → 送到問保險 AI；否則送到完整搜尋頁
+    if (isQuestionQuery(q)) {
+      router.push(`/ask?q=${encodeURIComponent(q)}`);
+      return;
     }
+    router.push(`/search?q=${encodeURIComponent(q)}`);
   }
 
   return (
@@ -38,9 +90,9 @@ export function HeroSearch() {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => window.setTimeout(() => setFocused(false), 160)}
-            placeholder="搜尋醫療保險、危疾保險、自付額、保單條款或保險問題"
+            placeholder="搜索保險產品、公司、保障、條款或直接問問題"
             className="h-11 w-full bg-transparent text-[15px] outline-none placeholder:text-ink-mute"
-            aria-label="搜尋保險產品、術語、條款或保險問題"
+            aria-label="搜索保險產品、公司、保障、條款或直接問問題"
           />
           <button
             type="submit"
@@ -61,6 +113,25 @@ export function HeroSearch() {
 
       {showPanel && (
         <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-xl border border-ink-line bg-white shadow-lift">
+          {/* 一句話答案（完整問題優先） */}
+          {quickAnswer && (
+            <div className="border-b border-ink-line bg-brand-50/60 px-4 py-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
+                <Sparkles size={11} aria-hidden />
+                一句話答案
+              </p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-brand-900">
+                {quickAnswer.answer}
+              </p>
+              <Link
+                href={`/ask?q=${encodeURIComponent(query)}`}
+                className="mt-1.5 inline-block text-[12px] font-medium text-brand-700 hover:underline"
+              >
+                深入問問 →
+              </Link>
+            </div>
+          )}
+
           {results.length === 0 ? (
             <div className="p-5 text-center">
               <p className="text-sm font-medium text-ink">未找到相關資料</p>
@@ -78,13 +149,13 @@ export function HeroSearch() {
                   href={`/ask?q=${encodeURIComponent(query)}`}
                   className="inline-flex text-[13px] font-medium text-brand-700 hover:underline"
                 >
-                  用問答方式查詢
+                  用問保險 AI 查詢
                 </Link>
               </div>
             </div>
           ) : (
             <ul className="max-h-[340px] overflow-y-auto">
-              {results.slice(0, 8).map((r: SearchResult) => {
+              {topResults.map((r: SearchResult) => {
                 const Icon = SEARCH_KIND_META[r.kind].icon;
                 return (
                   <li key={`${r.kind}-${r.id}`}>
@@ -96,6 +167,7 @@ export function HeroSearch() {
                       <Icon
                         size={16}
                         className="mt-0.5 shrink-0 text-brand-600"
+                        aria-hidden
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13.5px] font-medium text-ink">

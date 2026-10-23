@@ -20,7 +20,7 @@ export const navItems = [
   { href: "/products", label: "保險產品" },
   { href: "/compare", label: "產品比較" },
   { href: "/dictionary", label: "保險術語" },
-  { href: "/ask", label: "問保險問題" },
+  { href: "/ask", label: "問保險 AI" },
   { href: "/learn", label: "保險知識" },
 ];
 
@@ -33,6 +33,8 @@ export const secondaryNavItems = [
   { href: "/insurers", label: "保險公司" },
   { href: "/needs", label: "需求分析" },
   { href: "/trust", label: "信任中心" },
+  { href: "/ranking-methodology", label: "排序方法" },
+  { href: "/commercial-transparency", label: "商業透明度" },
 ];
 
 export const footerLinks = [
@@ -43,7 +45,7 @@ export const footerLinks = [
       { href: "/compare", label: "產品比較" },
       { href: "/insurers", label: "保險公司列表" },
       { href: "/dictionary", label: "保險術語字典" },
-      { href: "/ask", label: "問保險問題" },
+      { href: "/ask", label: "問保險 AI" },
     ],
   },
   {
@@ -62,6 +64,8 @@ export const footerLinks = [
       { href: "/about", label: "關於我們" },
       { href: "/transparency", label: "資料來源及更新方式" },
       { href: "/trust", label: "信任中心" },
+      { href: "/ranking-methodology", label: "排序方法" },
+      { href: "/commercial-transparency", label: "商業透明度" },
       { href: "/contact", label: "聯絡我們" },
     ],
   },

@@ -3,9 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { products, getProductBySlug } from "@/data/products";
 import { getInsurer } from "@/data/insurers";
-import { dictionary } from "@/data/dictionary";
-import { articles } from "@/data/articles";
 import { CATEGORY_LABELS } from "@/data/types";
+import { relationsForProduct } from "@/lib/relationships";
 import {
   pageMetadata,
   productJsonLd,
@@ -48,34 +47,12 @@ export default async function ProductPage({
 
   const insurer = getInsurer(product.insurerId);
 
-  // 相關術語（透過 coverage 名稱與 term 的相關性比對）
-  const relatedTerms = dictionary
-    .filter((t) => {
-      const hay = t.term + t.zh;
-      const names = product.coverage.map((c) => c.name + c.summary).join(" ");
-      const q = t.quickAnswer + t.explanation;
-      return (
-        hay.length > 0 &&
-        (names.includes(t.zh) ||
-          q.includes(t.zh) ||
-          product.category === "medical"
-            ? names.includes(t.zh) || q.includes(t.zh) || t.relatedProductIds.includes(product.id)
-            : false)
-      );
-    })
-    .slice(0, 6);
-
-  const relatedArticles = articles
-    .filter(
-      (a) =>
-        a.relatedProductIds.includes(product.id) ||
-        (a.relatedTerms ?? []).some((t) => relatedTerms.some((rt) => rt.slug === t)),
-    )
-    .slice(0, 3);
-
-  const relatedProducts = products
-    .filter((p) => p.id !== product.id && p.category === product.category)
-    .slice(0, 3);
+  // 相關內容由關係引擎推導（不再硬編碼清單）
+  const relations = relationsForProduct(product);
+  const relatedTerms = relations.terms.slice(0, 6);
+  const relatedArticles = relations.articles.slice(0, 3);
+  const relatedProducts = relations.products.slice(0, 3);
+  const relatedQuestions = relations.faqs.slice(0, 4);
 
   const breadcrumbs = [
     { name: "首頁", href: "/" },
@@ -120,6 +97,10 @@ export default async function ProductPage({
           title: a.title,
           category: a.category,
           readingMinutes: a.readingMinutes,
+        }))}
+        relatedQuestions={relatedQuestions.map((f) => ({
+          id: f.id,
+          question: f.question,
         }))}
         relatedProducts={relatedProducts.map((p) => ({
           id: p.id,
