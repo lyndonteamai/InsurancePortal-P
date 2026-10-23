@@ -1,5 +1,8 @@
 # 保險指南 Insurance Compass HK（Prototype）
 
+> GitHub 倉庫：**https://github.com/lyndonteamai/InsurancePortal-P**
+> 倉庫名 `InsurancePortal-P` 為部署平台需要嘅識別名；網站對外品牌名仍為「保險指南 Insurance Compass HK」。
+
 香港保險資訊及比較平台的可互動網站原型。定位類比「房產資訊入口」在保險市場的應用：
 以中立、資料可驗證嘅方式整理產品資料同條款，令消費者在投保之前先了解。
 
