@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans), system-ui, -apple-system, "PingFang HK",
+    "Microsoft JhengHei", sans-serif;
+  font-feature-settings: "palt" 1;
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6;
+  }
+
+  .prose-ic {
+    @apply text-[15px] leading-[1.9] text-ink-soft;
+  }
+
+  .prose-ic h2 {
+    @apply mt-9 mb-3 text-[19px] font-semibold tracking-tight text-ink;
+  }
+
+  .prose-ic p {
+    @apply mt-3;
+  }
+
+  .prose-ic ul {
+    @apply mt-3 space-y-2;
+  }
+
+  .prose-ic li {
+    @apply relative pl-5;
+  }
+
+  .prose-ic li::before {
+    content: "";
+    @apply absolute left-1 top-[11px] h-1.5 w-1.5 rounded-full bg-accent-500;
+  }
+
+  .prose-ic strong {
+    @apply font-semibold text-ink;
+  }
+}
+
+@media print {
+  header,
+  footer {
+    display: none;
+  }
+}
