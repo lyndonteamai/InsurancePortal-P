@@ -21,12 +21,13 @@ async function withPage(browser, viewport, fn) {
     if (m.type() === "error") errors.push(m.text());
   });
   page.on("pageerror", (e) => errors.push("PAGEERROR: " + e.message));
+  let result;
   try {
-    await fn(page, errors);
+    result = await fn(page, errors);
   } finally {
     await ctx.close();
   }
-  return errors;
+  return result !== undefined ? result : errors;
 }
 
 (async () => {
@@ -404,6 +405,31 @@ async function withPage(browser, viewport, fn) {
     "QA.10 全站無 console 錯誤",
     allErrors.length === 0,
     allErrors.length ? allErrors.slice(0, 5).join(" | ") : "0 個錯誤",
+  );
+
+  // QA.11：全量路由巡檢—— 直接由 sitemap 撈出所有 URL 逐一驗證 200。
+  // 呢條測試係為咗捉「建構期殘留舊錯誤產物」呢類問題：
+  // 之前有一個產品頁的靜態 HTML 內容係 __next_error__，但單頁測試剛好抽唔中。
+  const sm = await withPage(browser, desktop, async (page) => {
+    await page.goto(`${BASE}/sitemap.xml`, { waitUntil: "domcontentloaded" });
+    return await page.content();
+  });
+  const urls = [...sm.matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((m) => m[1].replace(/^https?:\/\/[^/]+/, "").replace(/\/$/, "") || "/")
+    .filter((u) => !u.includes("/admin-preview"));
+  const uniqueUrls = [...new Set(urls)];
+  const routeFails = [];
+  for (const u of uniqueUrls) {
+    const code = await withPage(browser, desktop, async (page) => {
+      const r = await page.goto(`${BASE}${u}`, { waitUntil: "domcontentloaded" });
+      return r ? r.status() : 0;
+    });
+    if (code !== 200) routeFails.push(`${code} ${u}`);
+  }
+  check(
+    `QA.11 sitemap 內全部 ${uniqueUrls.length} 條路由都回 200`,
+    routeFails.length === 0,
+    routeFails.length ? routeFails.slice(0, 8).join(" | ") : "全部 200",
   );
 
   await browser.close();
