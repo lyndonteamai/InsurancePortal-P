@@ -3,14 +3,45 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, X, Package, BookOpen, CircleHelp, CornerDownLeft } from "lucide-react";
-import { searchAll, searchSuggestions, type SearchResult } from "@/lib/search";
+import { Search, X, CornerDownLeft, History, ArrowRight } from "lucide-react";
+import {
+  searchAll,
+  searchSuggestions,
+  defaultSuggestions,
+  type SearchResult,
+} from "@/lib/search";
+import { SEARCH_KIND_META, SEARCH_KIND_ORDER } from "@/lib/search-ui";
+import { trackEvent } from "@/lib/analytics";
 
-const KIND_META: Record<SearchResult["kind"], { label: string; icon: typeof Package }> = {
-  product: { label: "產品", icon: Package },
-  article: { label: "文章", icon: BookOpen },
-  faq: { label: "保險知識", icon: CircleHelp },
-};
+const RECENT_KEY = "ic-recent-searches";
+const MAX_RECENT = 6;
+
+export function readRecentSearches(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function pushRecentSearch(q: string) {
+  if (typeof window === "undefined") return;
+  const trimmed = q.trim();
+  if (!trimmed) return;
+  try {
+    const list = [
+      trimmed,
+      ...readRecentSearches().filter((x) => x !== trimmed),
+    ].slice(0, MAX_RECENT);
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {
+    /* 儲存失敗時忽略，不影響搜尋 */
+  }
+}
 
 export function GlobalSearchDialog({
   open,
@@ -20,14 +51,17 @@ export function GlobalSearchDialog({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const [recent, setRecent] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const results = useMemo(() => searchAll(query), [query]);
+  const dynamicSuggestions = useMemo(() => searchSuggestions(query), [query]);
 
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 30);
+      setRecent(readRecentSearches());
     }
   }, [open]);
 
@@ -48,11 +82,17 @@ export function GlobalSearchDialog({
 
   if (!open) return null;
 
-  const grouped: [SearchResult["kind"], SearchResult[]][] = [
-    ["product", results.filter((r) => r.kind === "product")],
-    ["article", results.filter((r) => r.kind === "article")],
-    ["faq", results.filter((r) => r.kind === "faq")],
-  ];
+  const grouped = SEARCH_KIND_ORDER.map((kind) => ({
+    kind,
+    items: results.filter((r) => r.kind === kind),
+  })).filter((g) => g.items.length > 0);
+
+  function go(href: string) {
+    pushRecentSearch(query);
+    trackEvent("search_submit", { query, resultCount: results.length });
+    router.push(href);
+    onClose();
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[8vh]">
@@ -76,12 +116,11 @@ export function GlobalSearchDialog({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && results.length > 0) {
-                router.push(results[0].href);
-                onClose();
+                go(results[0].href);
               }
             }}
-            placeholder="搜尋產品、條款或保險問題…"
-            className="h-13 w-full bg-transparent py-4 text-[15px] outline-none placeholder:text-ink-mute"
+            placeholder="搜尋產品、術語、條款或保險問題…"
+            className="w-full bg-transparent py-4 text-[15px] outline-none placeholder:text-ink-mute"
             style={{ height: 52 }}
           />
           <button
@@ -97,11 +136,30 @@ export function GlobalSearchDialog({
         <div className="max-h-[60vh] overflow-y-auto">
           {!query && (
             <div className="p-4">
+              {recent.length > 0 && (
+                <>
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink-mute">
+                    <History size={12} /> 最近搜尋
+                  </p>
+                  <div className="mb-5 flex flex-wrap gap-2">
+                    {recent.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setQuery(s)}
+                        className="rounded-full border border-ink-line bg-paper px-3 py-1.5 text-[13px] text-ink-soft hover:border-brand-300 hover:text-brand-700"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-mute">
                 試試搜尋
               </p>
               <div className="flex flex-wrap gap-2">
-                {searchSuggestions.map((s) => (
+                {defaultSuggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -121,43 +179,78 @@ export function GlobalSearchDialog({
               <p className="mt-1.5 text-[13px] text-ink-mute">
                 請嘗試其他關鍵字，例如「自付額」、「危疾」、「續保」。
               </p>
+              {dynamicSuggestions.length > 0 && (
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {dynamicSuggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setQuery(s)}
+                      className="rounded-full border border-ink-line bg-paper px-3 py-1.5 text-[13px] text-ink-soft hover:border-brand-300 hover:text-brand-700"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <Link
+                href={`/ask?q=${encodeURIComponent(query)}`}
+                onClick={onClose}
+                className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-brand-700 hover:underline"
+              >
+                用問答方式查這條問題
+                <ArrowRight size={13} />
+              </Link>
             </div>
           )}
 
           {query &&
-            grouped.map(([kind, list]) =>
-              list.length === 0 ? null : (
-                <section key={kind} className="border-b border-ink-line last:border-b-0">
-                  <h3 className="bg-paper px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-ink-mute">
-                    {KIND_META[kind].label}（{list.length}）
-                  </h3>
-                  <ul>
-                    {list.slice(0, kind === "product" ? 6 : 5).map((r) => {
-                      const Icon = KIND_META[r.kind].icon;
+            grouped.map((g) => (
+              <section
+                key={g.kind}
+                className="border-b border-ink-line last:border-b-0"
+              >
+                <h3 className="bg-paper px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-ink-mute">
+                  {SEARCH_KIND_META[g.kind].label}（{g.items.length}）
+                </h3>
+                <ul>
+                  {g.items
+                    .slice(0, g.kind === "product" ? 6 : 5)
+                    .map((r: SearchResult) => {
+                      const Icon = SEARCH_KIND_META[r.kind].icon;
                       return (
                         <li key={`${r.kind}-${r.id}`}>
                           <Link
                             href={r.href}
-                            onClick={onClose}
+                            onClick={() => {
+                              pushRecentSearch(query);
+                              trackEvent("search_submit", {
+                                query,
+                                resultCount: results.length,
+                              });
+                              onClose();
+                            }}
                             className="flex items-start gap-3 px-4 py-3 hover:bg-paper"
                           >
-                            <Icon size={16} className="mt-0.5 shrink-0 text-brand-600" />
+                            <Icon
+                              size={16}
+                              className="mt-0.5 shrink-0 text-brand-600"
+                            />
                             <span className="min-w-0">
                               <span className="block truncate text-sm font-medium text-ink">
                                 {r.title}
                               </span>
                               <span className="block truncate text-[12px] text-ink-mute">
-                                {r.meta}
+                                {r.subtitle}
                               </span>
                             </span>
                           </Link>
                         </li>
                       );
                     })}
-                  </ul>
-                </section>
-              )
-            )}
+                </ul>
+              </section>
+            ))}
         </div>
 
         <div className="flex items-center justify-between border-t border-ink-line bg-paper px-4 py-2 text-[11px] text-ink-mute">

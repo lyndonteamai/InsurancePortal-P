@@ -1,624 +1,1914 @@
-import type { InsuranceProduct } from "./types";
+import type {
+  InsuranceProduct,
+  CoverageItem,
+  ExclusionItem,
+  SourceDocument,
+} from "./types";
 
-// 全部品牌及產品均為虛構，僅作 Prototype 展示用途。
+// ============================================================
+// 產品資料 (V2)
+// ============================================================
+// 全部為原型虛構資料。每個產品都完整填寫 V2 schema：
+//   eligibility / coverage / exclusions / deductible / waitingPeriod
+//   renewal / premiumExamples / sourceDocuments / verification
+// 目的是示範：當資料由 API 供應時，UI 層不需要改動。
+// ============================================================
+
+const REVIEWED = "2026-01-20";
+const UPDATED = "2026-01-20";
+
+/** 產生產品內嵌的條款來源 */
+function terms(
+  insurer: string,
+  code: string,
+  version: string,
+  publishedAt: string,
+): SourceDocument {
+  return {
+    id: `src-${code}-terms`,
+    title: `${insurer}《${code}》保單條款`,
+    type: "policy_terms",
+    publisher: insurer,
+    version,
+    publishedAt,
+    url: null,
+    locator: "全文",
+    isPrototype: true,
+    note: "原型示範：實際環境應附上條款 PDF 的公開連結。",
+  };
+}
+
+function sheet(
+  insurer: string,
+  code: string,
+  version: string,
+  publishedAt: string,
+): SourceDocument {
+  return {
+    id: `src-${code}-sheet`,
+    title: `${insurer}《${code}》產品小冊子`,
+    type: "product_sheet",
+    publisher: insurer,
+    version,
+    publishedAt,
+    url: null,
+    locator: "保障摘要表",
+    isPrototype: true,
+    note: "原型示範：此類來源用於交叉核對條款與小冊子的數字是否一致。",
+  };
+}
+
+// ------------------------------------------------------------
+// 1. 港盾 · 住院醫療
+// ------------------------------------------------------------
+const hsMed01Coverage: CoverageItem[] = [
+  {
+    id: "hs-med-01-c1",
+    category: "hospital",
+    name: "住院病房費",
+    summary: "因疾病或意外住院期間的病房及雜項開支。",
+    limit: "每日最高 HK$8,000，每年最高 HK$300,000",
+    highlight: true,
+    sourceIds: ["src-hs-med-01-terms", "src-hs-med-01-sheet"],
+  },
+  {
+    id: "hs-med-01-c2",
+    category: "surgical",
+    name: "手術費用",
+    summary: "住院手術的醫生、麻醉師及手術室開支。",
+    limit: "每宗手術最高 HK$120,000",
+    highlight: true,
+    sourceIds: ["src-hs-med-01-terms"],
+  },
+  {
+    id: "hs-med-01-c3",
+    category: "outpatient",
+    name: "門診急症",
+    summary: "門診急症室的診症及基本檢查開支。",
+    limit: "每次最高 HK$1,500",
+    sourceIds: ["src-hs-med-01-sheet"],
+  },
+  {
+    id: "hs-med-01-c4",
+    category: "other",
+    name: "住院前後門診",
+    summary: "住院前 14 日及出院後 30 日的覆診門診開支。",
+    limit: "每年最高 HK$6,000",
+    sourceIds: ["src-hs-med-01-terms"],
+  },
+];
+
+const hsMed01Exclusions: ExclusionItem[] = [
+  {
+    id: "hs-med-01-e1",
+    name: "非必要的美容或整型手術",
+    description: "純屬改善外觀而非治療必需的手術不獲保障。",
+    sourceIds: ["src-hs-med-01-terms"],
+  },
+  {
+    id: "hs-med-01-e2",
+    name: "投保前已存在的病症",
+    description: "投保前 12 個月內已出現症狀或曾接受治療的病症屬不保事項。",
+    sourceIds: ["src-hs-med-01-terms"],
+  },
+  {
+    id: "hs-med-01-e3",
+    name: "自行選擇的私家服務",
+    description: "非由醫生建議的自費檢查或自選醫療服務不獲保障。",
+    sourceIds: ["src-hs-med-01-sheet"],
+  },
+];
+
+export const productHsMed01: InsuranceProduct = {
+  id: "hs-med-01",
+  slug: "harbor-shield-hospital-plan",
+  name: "港盾「守望」住院醫療計劃",
+  nameEn: "Harbor Shield Hospital Plan",
+  insurerId: "harbor-shield",
+  category: "medical",
+  tagline: "以住院及手術為核心的自付額設計方案",
+  description:
+    "港盾保險的住院醫療方案，保障重心放在住院病房與手術開支，並附帶住院前後門診。適用於已透過公司或個人醫療計劃覆蓋日常門診、但希望補上較大住院風險的家庭。",
+  eligibility: {
+    minAge: 0,
+    maxAge: 70,
+    residency: "須為香港居民並連續居港滿 1 年",
+    healthDeclaration: true,
+    occupationLimits: true,
+    notes: [
+      "未滿 18 歲投保須由家長作為監護人簽署",
+      "任職高危行業人士可能需要加費或受限於某個職位類別",
+    ],
+  },
+  coverage: hsMed01Coverage,
+  exclusions: hsMed01Exclusions,
+  deductible: {
+    hasDeductible: true,
+    value: "每次住院 HK$5,000",
+    basis: "每次住院",
+    sourceIds: ["src-hs-med-01-terms"],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: true,
+    value: "意外：30 日；疾病：180 日",
+    sourceIds: ["src-hs-med-01-terms"],
+  },
+  renewal: {
+    type: "guaranteed_renewal",
+    label: "保證續保",
+    description:
+      "在保單生效日起計的 5 個保單年度內，保險公司保證不因健康狀況或索償紀錄而拒絕續保。",
+    years: 5,
+    sourceIds: ["src-hs-med-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "30 歲・非吸煙・自願投保",
+      assumptions: "30 歲、非吸煙、一般文職、沒有已知病症",
+      annualPremium: 2880,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+    {
+      label: "45 歲・非吸煙・自願投保",
+      assumptions: "45 歲、非吸煙、保費按年齡分級",
+      annualPremium: 6480,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: [
+    "住院保障額高",
+    "保證續保 5 年",
+    "保費按年齡分級",
+    "設有住院前後門診",
+  ],
+  termPoints: [
+    {
+      title: "自付額是關鍵變數",
+      detail:
+        "每次住院自付 HK$5,000 代表每次入院要先自己付這筆錢。住院次數多的話，總自付額會很可觀，比較時必須用實際住院頻率估算。",
+    },
+    {
+      title: "續保年期結束後要重新核保",
+      detail:
+        "5 年保證續保期滿後，保險公司可按當時健康狀況重新定價或拒絕續保。",
+    },
+    {
+      title: "等待期對新病是關鍵",
+      detail: "疾病等待期 180 日，投保後首 6 個月內發病基本不獲保障。",
+    },
+  ],
+  sourceDocuments: [
+    terms("港盾保險", "守望住院醫療", "v3.2", "2025-10-01"),
+    sheet("港盾保險", "守望住院醫療", "2025 年版", "2025-10-01"),
+  ],
+  verification: {
+    status: "verified",
+    lastReviewedAt: REVIEWED,
+  },
+  paymentOptions: ["按年繳付", "按月繳付"],
+  termsVersion: "v3.2",
+  updatedAt: UPDATED,
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 2. 港盾 · 全包醫療（部分核實：保費為示例）
+// ------------------------------------------------------------
+export const productHsMed02: InsuranceProduct = {
+  id: "hs-med-02",
+  slug: "harbor-shield-comprehensive-plan",
+  name: "港盾「全包」住院及門診計劃",
+  nameEn: "Harbor Shield Comprehensive Plan",
+  insurerId: "harbor-shield",
+  category: "medical",
+  tagline: "住院與門診合併計算的低自付額方案",
+  description:
+    "在同一網絡內把住院、門急症及門診合併為一個共同自付額，適合門診需求高、預計全年多次求診的家庭。代價是保費相對較高，且必須使用指定醫療網絡。",
+  eligibility: {
+    minAge: 0,
+    maxAge: 65,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: false,
+    notes: ["指定網絡以外的就診只可索償門急症部分"],
+  },
+  coverage: [
+    {
+      id: "hs-med-02-c1",
+      category: "hospital",
+      name: "住院病房費",
+      summary: "網絡內住院的病房開支。",
+      limit: "每日最高 HK$12,000，每年最高 HK$500,000",
+      highlight: true,
+      sourceIds: ["src-hs-med-02-terms"],
+    },
+    {
+      id: "hs-med-02-c2",
+      category: "surgical",
+      name: "手術費用",
+      summary: "網絡內進行的住院手術開支。",
+      limit: "每宗手術最高 HK$200,000",
+      highlight: true,
+      sourceIds: ["src-hs-med-02-terms"],
+    },
+    {
+      id: "hs-med-02-c3",
+      category: "outpatient",
+      name: "門診（普通科及專科）",
+      summary: "網絡內普通科及專科門診，每宗設有共同自付額。",
+      limit: "每年最高 HK$80,000",
+      highlight: true,
+      sourceIds: ["src-hs-med-02-sheet"],
+    },
+    {
+      id: "hs-med-02-c4",
+      category: "outpatient",
+      name: "門急症",
+      summary: "門診急症室的診症及檢查開支。",
+      limit: "每次最高 HK$2,500",
+      sourceIds: ["src-hs-med-02-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "hs-med-02-e1",
+      name: "非指定網絡的門診",
+      description: "於指定網絡外診症的門診開支不獲保障。",
+      sourceIds: ["src-hs-med-02-terms"],
+    },
+    {
+      id: "hs-med-02-e2",
+      name: "牙科及常規護理",
+      description: "洗牙、補牙及牙科治療不屬本計劃保障範圍。",
+      sourceIds: ["src-hs-med-02-terms"],
+    },
+    {
+      id: "hs-med-02-e3",
+      name: "處方藥物及非處方藥",
+      description: "門診處方的藥物費用不在保障範圍內。",
+      sourceIds: ["src-hs-med-02-sheet"],
+    },
+  ],
+  deductible: {
+    hasDeductible: true,
+    value: "每年共同自付額 HK$2,000",
+    basis: "每年（住院及門診合併計算）",
+    sourceIds: ["src-hs-med-02-terms"],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: true,
+    value: "意外：30 日；疾病：90 日",
+    sourceIds: ["src-hs-med-02-terms"],
+  },
+  renewal: {
+    type: "guaranteed_renewal_period",
+    label: "保證續保年期至 75 歲",
+    description:
+      "保單年期內不重新核保，但保費會按年齡調整；75 歲後按公司當時條款續保。",
+    years: 1,
+    sourceIds: ["src-hs-med-02-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "35 歲・非吸煙・自願投保",
+      assumptions: "35 歲、非吸煙、自願投保、住院及門診合併自付額",
+      annualPremium: 9600,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: [
+    "住院門診合併自付額",
+    "門診保障額較高",
+    "指定醫療網絡",
+    "覆蓋至 75 歲",
+  ],
+  termPoints: [
+    {
+      title: "共同自付額改變了成本結構",
+      detail:
+        "住院與門診共用同一自付額，代表你住院次數多，用盡自付額後的門診就近乎免費。",
+    },
+    {
+      title: "網絡限制是硬成本",
+      detail:
+        "指定網絡以外門診不獲保障，若你常去的診所在網絡外，實際開支會高於保費差距。",
+    },
+  ],
+  sourceDocuments: [
+    terms("港盾保險", "全包住院及門診", "v2.8", "2025-08-15"),
+    sheet("港盾保險", "全包住院及門診", "2025 年版", "2025-08-15"),
+  ],
+  verification: {
+    status: "partially_verified",
+    lastReviewedAt: REVIEWED,
+    unverifiedFields: ["保費示例數字"],
+  },
+  paymentOptions: ["按年繳付"],
+  termsVersion: "v2.8",
+  updatedAt: UPDATED,
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 3. 港盾 · 定期人壽（尚未核實）
+// ------------------------------------------------------------
+export const productHsLife01: InsuranceProduct = {
+  id: "hs-life-01",
+  slug: "harbor-shield-term-life",
+  name: "港盾「定年」定期人壽保險",
+  nameEn: "Harbor Shield Term Life",
+  insurerId: "harbor-shield",
+  category: "life",
+  tagline: "保費固定、條款簡單的保障期身故保障",
+  description:
+    "在指定保障年期內提供身故保障，保費在年期內不變。產品結構最簡單，但不含儲蓄成分，也不保證續保，適合已有其他資產配置的客戶。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 60,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: true,
+    notes: ["保障年期選項：10 年、20 年、30 年或至 70 歲"],
+  },
+  coverage: [
+    {
+      id: "hs-life-01-c1",
+      category: "death",
+      name: "身故保障",
+      summary: "保障期內身故或因指定疾病身故，支付基本保額。",
+      limit: "HK$300,000 – HK$2,000,000（按投保年齡及年期）",
+      highlight: true,
+      sourceIds: ["src-hs-life-01-terms"],
+    },
+    {
+      id: "hs-life-01-c2",
+      category: "other",
+      name: "全殘保障",
+      summary: "因保單列明疾病或傷殘導致完全殘廢。",
+      limit: "與基本保額相同",
+      sourceIds: ["src-hs-life-01-terms"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "hs-life-01-e1",
+      name: "首年自殺不保",
+      description: "保單生效首 13 個月內因自殺身故不獲保障。",
+      sourceIds: ["src-hs-life-01-terms"],
+    },
+    {
+      id: "hs-life-01-e2",
+      name: "參與高危活動",
+      description: "參與格鬥、登山、競速等列明高危活動期間身故不保。",
+      sourceIds: ["src-hs-life-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: false,
+    sourceIds: [],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: false,
+    sourceIds: [],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "不保證續保",
+    description:
+      "保障年期屆滿後不保證續保。到期後的保費按當時年齡及風險重新計算，亦可選擇不再續保。",
+    sourceIds: ["src-hs-life-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "30 歲・非吸煙・20 年保障",
+      assumptions: "30 歲、非吸煙、基本保額 HK$1,000,000、20 年保障期",
+      annualPremium: 2100,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["保費年期內固定", "條款簡單", "保額可選範圍大"],
+  termPoints: [
+    {
+      title: "沒有儲蓄成分",
+      detail:
+        "定期人壽屬純保障產品，保費用完即止，保障期滿沒有現金價值。若你已經有足夠的被動收入，考慮這類產品是為了填補缺口，而非累積資產。",
+    },
+    {
+      title: "續保時的年齡成本",
+      detail:
+        "若選擇續保，保費會按屆時年齡重新定價，通常明顯高於原本年齡的保費。",
+    },
+  ],
+  sourceDocuments: [terms("港盾保險", "定年定期人壽", "v1.9", "2025-06-01")],
+  verification: {
+    status: "unverified",
+    lastReviewedAt: "2026-01-05",
+    unverifiedFields: ["保障範圍細項", "保費示例數字"],
+  },
+  paymentOptions: ["按年繳付", "按月繳付"],
+  termsVersion: "v1.9",
+  updatedAt: "2026-01-05",
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 4. 楓葉 · 守護危疾（已核實）
+// ------------------------------------------------------------
+export const productMlCi01: InsuranceProduct = {
+  id: "ml-ci-01",
+  slug: "maple-life-shield-critical-illness",
+  name: "楓葉「守護」危疾保障計劃",
+  nameEn: "Maple Life Shield Critical Illness",
+  insurerId: "maple-life",
+  category: "critical-illness",
+  tagline: "早期危疾亦可赔付的一次性保障",
+  description:
+    "受保人在保障期內確診指定危疾，可一次性獲得基本保額，用於應付治療期間的收入中斷及康復開支。此計劃的特色是把早期癌症及心臟病也納入理賠範圍。",
+  eligibility: {
+    minAge: 0,
+    maxAge: 60,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: true,
+    notes: ["0–15 歲投保限於指定兒童危疾清單", "吸煙人士可能被加費"],
+  },
+  coverage: [
+    {
+      id: "ml-ci-01-c1",
+      category: "critical",
+      name: "癌症保障",
+      summary: "確診癌症即赔付基本保額，早期癌症亦包括在內。",
+      limit: "基本保額 HK$300,000 – HK$1,500,000",
+      highlight: true,
+      sourceIds: ["src-ml-ci-01-terms"],
+    },
+    {
+      id: "ml-ci-01-c2",
+      category: "critical",
+      name: "心臟病保障",
+      summary: "須符合條款列明的心臟病定義及嚴重程度。",
+      limit: "基本保額的 100%",
+      highlight: true,
+      sourceIds: ["src-ml-ci-01-terms"],
+    },
+    {
+      id: "ml-ci-01-c3",
+      category: "critical",
+      name: "中風保障",
+      summary: "須符合條款對中風後遺症的定義。",
+      limit: "基本保額的 100%",
+      sourceIds: ["src-ml-ci-01-terms"],
+    },
+    {
+      id: "ml-ci-01-c4",
+      category: "critical",
+      name: "器官衰竭保障",
+      summary: "須器官功能永久性衰竭並符合條款定義。",
+      limit: "基本保額的 100%",
+      sourceIds: ["src-ml-ci-01-sheet"],
+    },
+    {
+      id: "ml-ci-01-c5",
+      category: "disability",
+      name: "完全永久失明",
+      summary: "雙眼視力永久完全喪失。",
+      limit: "基本保額的 100%",
+      sourceIds: ["src-ml-ci-01-terms"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "ml-ci-01-e1",
+      name: "投保前已有的病症",
+      description: "投保前 5 年內曾出現相關症狀或接受治療的病症不獲保障。",
+      sourceIds: ["src-ml-ci-01-terms"],
+    },
+    {
+      id: "ml-ci-01-e2",
+      name: "非條款定義的狀況",
+      description: "只有列入條款定義的危疾才可理賠，症狀相似但定義不符者不獲保障。",
+      sourceIds: ["src-ml-ci-01-terms"],
+    },
+    {
+      id: "ml-ci-01-e3",
+      name: "生存期未滿的死亡",
+      description: "受保人於確診後 30 日內去世，保單可能只退回保費。",
+      sourceIds: ["src-ml-ci-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: false,
+    sourceIds: [],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: true,
+    value: "90 日（意外不適用）",
+    sourceIds: ["src-ml-ci-01-terms"],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "不保證續保",
+    description:
+      "危疾保單一般不保證續保。此計劃在 10 個保單年度後可選擇續保，保費按屆時年齡及風險重新計算。",
+    sourceIds: ["src-ml-ci-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "30 歲・非吸煙・女性",
+      assumptions: "30 歲、非吸煙、女性、基本保額 HK$500,000",
+      annualPremium: 3480,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+    {
+      label: "40 歲・非吸煙・男性",
+      assumptions: "40 歲、非吸煙、男性、基本保額 HK$500,000",
+      annualPremium: 6180,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: [
+    "早期癌症可賠",
+    "保額一次性支付",
+    "涵蓋 30+ 項危疾",
+    "可選投保年齡至 60 歲",
+  ],
+  termPoints: [
+    {
+      title: "危疾定義比疾病名稱重要",
+      detail:
+        "「癌症」在條款裏不是一個日常說法。早期癌症是否賠、賠多少，取決於保單是否列出相關定義。",
+    },
+    {
+      title: "一次性支付而非實報實銷",
+      detail:
+        "危疾保額是一次性支付，不需出示發票。這與醫療保險的實報實銷性質完全不同。",
+    },
+  ],
+  sourceDocuments: [
+    terms("楓葉人壽", "守護危疾", "v4.1", "2025-09-01"),
+    sheet("楓葉人壽", "守護危疾", "2025 年版", "2025-09-01"),
+  ],
+  verification: {
+    status: "verified",
+    lastReviewedAt: REVIEWED,
+  },
+  paymentOptions: ["按年繳付", "按季繳付", "按月繳付"],
+  termsVersion: "v4.1",
+  updatedAt: UPDATED,
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 5. 楓葉 · 多重危疾（部分核實）
+// ------------------------------------------------------------
+export const productMlCi02: InsuranceProduct = {
+  id: "ml-ci-02",
+  slug: "maple-life-multi-pay-critical-illness",
+  name: "楓葉「多重」多次赔付危疾計劃",
+  nameEn: "Maple Life Multi-Pay Critical Illness",
+  insurerId: "maple-life",
+  category: "critical-illness",
+  tagline: "同一次保障期內可多次赔付的危疾保障",
+  description:
+    "與一次性赔付的危疾計劃不同，此計劃在保障期內第二次或之後確診符合條款的危疾時，可再次獲得賠償，用於覆蓋康復期及復發風險。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 55,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: true,
+    notes: ["不適用於 0–17 歲投保"],
+  },
+  coverage: [
+    {
+      id: "ml-ci-02-c1",
+      category: "critical",
+      name: "首次危疾保障",
+      summary: "首次確診符合條款定義的危疾，支付基本保額。",
+      limit: "HK$500,000 – HK$3,000,000",
+      highlight: true,
+      sourceIds: ["src-ml-ci-02-terms"],
+    },
+    {
+      id: "ml-ci-02-c2",
+      category: "critical",
+      name: "多次赔付保障",
+      summary: "第二次及之後確診危疾，可再獲基本保額 50% 賠償。",
+      limit: "每次基本保額的 50%，最多 4 次",
+      highlight: true,
+      sourceIds: ["src-ml-ci-02-terms"],
+    },
+    {
+      id: "ml-ci-02-c3",
+      category: "critical",
+      name: "癌症額外赔付",
+      summary: "若首次赔付項目為癌症，第二次赔付提高至基本保額 100%。",
+      limit: "基本保額的 100%",
+      sourceIds: ["src-ml-ci-02-sheet"],
+    },
+    {
+      id: "ml-ci-02-c4",
+      category: "death",
+      name: "身故保障",
+      summary: "保障期內身故，支付基本保額。",
+      limit: "HK$500,000 – HK$3,000,000",
+      sourceIds: ["src-ml-ci-02-terms"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "ml-ci-02-e1",
+      name: "復發同一項危疾",
+      description: "再次確診與首次相同的危疾，不再作多次赔付。",
+      sourceIds: ["src-ml-ci-02-terms"],
+    },
+    {
+      id: "ml-ci-02-e2",
+      name: "條款間隔期內的賠付",
+      description: "兩次赔付之間必須相隔條款列明的期間，否則第二次不獲賠。",
+      sourceIds: ["src-ml-ci-02-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: false,
+    sourceIds: [],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: true,
+    value: "90 日",
+    sourceIds: ["src-ml-ci-02-terms"],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "不保證續保",
+    description: "保障年期屆滿後不保證續保，保費按屆時風險重新計算。",
+    sourceIds: ["src-ml-ci-02-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "35 歲・非吸煙・男性",
+      assumptions: "35 歲、非吸煙、男性、基本保額 HK$1,000,000",
+      annualPremium: 8900,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["最多 4 次賠付", "癌症賠付比例較高", "同時包含身故保障"],
+  termPoints: [
+    {
+      title: "間隔期決定了多次赔付的實用性",
+      detail:
+        "如果兩次赔付之間需要相隔 12 個月，多次的設計在復發性疾病上的實際價值會打折扣。",
+    },
+  ],
+  sourceDocuments: [
+    terms("楓葉人壽", "多重危疾", "v1.4", "2025-11-01"),
+    sheet("楓葉人壽", "多重危疾", "2025 年版", "2025-11-01"),
+  ],
+  verification: {
+    status: "partially_verified",
+    lastReviewedAt: REVIEWED,
+    unverifiedFields: ["間隔期具體月數", "保費示例數字"],
+  },
+  paymentOptions: ["按年繳付"],
+  termsVersion: "v1.4",
+  updatedAt: UPDATED,
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 6. 楓葉 · 終身人壽（已核實）
+// ------------------------------------------------------------
+export const productMlLife01: InsuranceProduct = {
+  id: "ml-life-01",
+  slug: "maple-life-lifetime-protection",
+  name: "楓葉「長願」終身人壽保險",
+  nameEn: "Maple Life Lifetime Protection",
+  insurerId: "maple-life",
+  category: "life",
+  tagline: "含保證現金值的終身保障，兼顧身故與傳承",
+  description:
+    "提供終身身故保障，同時設有保證現金值部分，於指定年期後每年增加。定位是「有儲蓄成分的身故保障」，而非純粹的保障型產品。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 65,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: true,
+    notes: ["須通過財務需要評估", "保額需符合受保人的經濟能力"],
+  },
+  coverage: [
+    {
+      id: "ml-life-01-c1",
+      category: "death",
+      name: "終身身故保障",
+      summary: "受保人身故時支付基本保額或保證現金值（以較高者為準）。",
+      limit: "基本保額 HK$200,000 – HK$5,000,000",
+      highlight: true,
+      sourceIds: ["src-ml-life-01-terms"],
+    },
+    {
+      id: "ml-life-01-c2",
+      category: "other",
+      name: "保證現金值",
+      summary: "第 10 個保單年度起，每年按條款增加並保證不會減少。",
+      limit: "按保單列明的保證現金值表",
+      highlight: true,
+      sourceIds: ["src-ml-life-01-terms"],
+    },
+    {
+      id: "ml-life-01-c3",
+      category: "retirement",
+      name: "身故後一次性提取",
+      summary: "受益人可選擇一次性提取或分期領取身故保障。",
+      limit: "由受益人選擇",
+      sourceIds: ["src-ml-life-01-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "ml-life-01-e1",
+      name: "首年自殺不保",
+      description: "保單生效首 13 個月內因自殺身故不獲保障。",
+      sourceIds: ["src-ml-life-01-terms"],
+    },
+    {
+      id: "ml-life-01-e2",
+      name: "故意行為導致的死亡",
+      description: "受保人故意犯罪或違反法律行為導致身故不保。",
+      sourceIds: ["src-ml-life-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: false,
+    sourceIds: [],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: false,
+    sourceIds: [],
+  },
+  renewal: {
+    type: "guaranteed_renewal",
+    label: "終身有效",
+    description:
+      "只要按時繳交保費，保單有效至受保人身故，保證現金值不會因市場波動而減少。",
+    sourceIds: ["src-ml-life-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "35 歲・非吸煙・男性",
+      assumptions:
+        "35 歲、非吸煙、男性、基本保額 HK$1,000,000、保證交 20 年",
+      annualPremium: 24500,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["保證現金值不會減少", "終身有效", "受益人可選分期領取"],
+  termPoints: [
+    {
+      title: "保費能否交完是核心問題",
+      detail:
+        "長期儲蓄型產品常以「保證交 10 年／20 年」設計，之後保費需由保單現金值繳付。同一產品不同交費年期，保費差距可以很大。",
+    },
+    {
+      title: "保證現金值不等於現金",
+      detail:
+        "保證現金值是保單上的數字，並非可即時取用的銀行存款，退保時實際價值可能低於該數字。",
+    },
+  ],
+  sourceDocuments: [
+    terms("楓葉人壽", "長願終身人壽", "v5.0", "2025-07-01"),
+    sheet("楓葉人壽", "長願終身人壽", "2025 年版", "2025-07-01"),
+  ],
+  verification: {
+    status: "verified",
+    lastReviewedAt: REVIEWED,
+  },
+  paymentOptions: ["按年繳付", "按月繳付"],
+  termsVersion: "v5.0",
+  updatedAt: UPDATED,
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 7. 明康 · 門診住院綜合（已核實）
+// ------------------------------------------------------------
+export const productBcMed01: InsuranceProduct = {
+  id: "bc-med-01",
+  slug: "brightcare-outpatient-inpatient",
+  name: "明康「康健」門診住院綜合計劃",
+  nameEn: "BrightCare Outpatient & Inpatient Plan",
+  insurerId: "brightcare",
+  category: "medical",
+  tagline: "門診次數不受次數限制的自付額方案",
+  description:
+    "住院與門診共用自付額，但門診不設次數上限，適合長期需要覆診的慢性病患者。與港盾「全包」的差別，主要在門診次數與網絡要求。",
+  eligibility: {
+    minAge: 0,
+    maxAge: 70,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: false,
+    notes: ["慢性病患者須申報病況"],
+  },
+  coverage: [
+    {
+      id: "bc-med-01-c1",
+      category: "outpatient",
+      name: "門診保障（不限次數）",
+      summary: "普通科及專科門診，於自付額達標後不設次數上限。",
+      limit: "每年最高 HK$120,000",
+      highlight: true,
+      sourceIds: ["src-bc-med-01-terms"],
+    },
+    {
+      id: "bc-med-01-c2",
+      category: "hospital",
+      name: "住院病房費",
+      summary: "因疾病或意外住院的病房開支。",
+      limit: "每日最高 HK$10,000，每年最高 HK$400,000",
+      highlight: true,
+      sourceIds: ["src-bc-med-01-terms"],
+    },
+    {
+      id: "bc-med-01-c3",
+      category: "surgical",
+      name: "手術費用",
+      summary: "住院手術的醫療及相關開支。",
+      limit: "每宗手術最高 HK$180,000",
+      sourceIds: ["src-bc-med-01-sheet"],
+    },
+    {
+      id: "bc-med-01-c4",
+      category: "outpatient",
+      name: "門急症",
+      summary: "門急症室的診症及基本檢查。",
+      limit: "每次最高 HK$2,000",
+      sourceIds: ["src-bc-med-01-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "bc-med-01-e1",
+      name: "維護及藥物費用",
+      description: "定期維護、藥物及復康器材費用不在保障範圍。",
+      sourceIds: ["src-bc-med-01-terms"],
+    },
+    {
+      id: "bc-med-01-e2",
+      name: "非必需的檢查項目",
+      description: "沒有醫療必要的篩查性檢查不獲保障。",
+      sourceIds: ["src-bc-med-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: true,
+    value: "每年 HK$1,500（住院及門診共用）",
+    basis: "每年",
+    sourceIds: ["src-bc-med-01-terms"],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: true,
+    value: "意外：30 日；疾病：90 日",
+    sourceIds: ["src-bc-med-01-terms"],
+  },
+  renewal: {
+    type: "guaranteed_renewal",
+    label: "保證續保至 70 歲",
+    description: "70 歲前不重新核保，保費按年齡調整。",
+    sourceIds: ["src-bc-med-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "40 歲・非吸煙・自願投保",
+      assumptions: "40 歲、非吸煙、門診不限次數",
+      annualPremium: 7200,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["門診不限次數", "住院門診共用自付額", "保證續保至 70 歲"],
+  termPoints: [
+    {
+      title: "自付額低但保費高",
+      detail:
+        "低自付額必然反映在較高保費上。真正要比較的，是「自付額 + 每年保費」的總和，而不是單看保費。",
+    },
+  ],
+  sourceDocuments: [
+    terms("明康護理", "康健門診住院", "v3.0", "2025-09-20"),
+    sheet("明康護理", "康健門診住院", "2025 年版", "2025-09-20"),
+  ],
+  verification: {
+    status: "verified",
+    lastReviewedAt: REVIEWED,
+  },
+  paymentOptions: ["按年繳付", "按月繳付"],
+  termsVersion: "v3.0",
+  updatedAt: UPDATED,
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 8. 明康 · 銀卡住院（原型模擬資料）
+// ------------------------------------------------------------
+export const productBcMed02: InsuranceProduct = {
+  id: "bc-med-02",
+  slug: "brightcare-silver-hospital",
+  name: "明康「銀卡」住院保障計劃",
+  nameEn: "BrightCare Silver Hospital Plan",
+  insurerId: "brightcare",
+  category: "medical",
+  tagline: "基本住院保障，門診保障有限",
+  description:
+    "明康的入門住院方案，住院保障額與門診範圍都較低，保費相對便宜。適合已有公司團體醫療保險、只需要住院風險墊底的在職人士。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 60,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: true,
+    notes: ["不接受 65 歲以上投保"],
+  },
+  coverage: [
+    {
+      id: "bc-med-02-c1",
+      category: "hospital",
+      name: "住院病房費",
+      summary: "住院期間的病房開支。",
+      limit: "每日最高 HK$6,000",
+      highlight: true,
+      sourceIds: ["src-bc-med-02-terms"],
+    },
+    {
+      id: "bc-med-02-c2",
+      category: "surgical",
+      name: "手術費用",
+      summary: "住院手術開支。",
+      limit: "每宗手術最高 HK$90,000",
+      sourceIds: ["src-bc-med-02-terms"],
+    },
+    {
+      id: "bc-med-02-c3",
+      category: "outpatient",
+      name: "門急症",
+      summary: "門急症室診症開支。",
+      limit: "每次最高 HK$1,200",
+      sourceIds: ["src-bc-med-02-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "bc-med-02-e1",
+      name: "專科門診",
+      description: "本計劃不保障專科門診。",
+      sourceIds: ["src-bc-med-02-terms"],
+    },
+    {
+      id: "bc-med-02-e2",
+      name: "手術後護理",
+      description: "手術後護理及復康療程不在保障範圍。",
+      sourceIds: ["src-bc-med-02-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: true,
+    value: "每次住院 HK$8,000",
+    basis: "每次住院",
+    sourceIds: ["src-bc-med-02-terms"],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: true,
+    value: "意外：30 日；疾病：120 日",
+    sourceIds: ["src-bc-med-02-terms"],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "不保證續保",
+    description: "產品不保證續保，續保與否由保險公司按當時條款決定。",
+    sourceIds: ["src-bc-med-02-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "30 歲・非吸煙",
+      assumptions: "30 歲、非吸煙、只保障住院",
+      annualPremium: 1680,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["保費較低", "以住院為主", "門急症基本覆蓋"],
+  termPoints: [
+    {
+      title: "自付額與保障額的比例",
+      detail:
+        "每日病房 HK$6,000 加上每次住院 HK$8,000 自付額，實際保障起點不算低，需要用實際住院情境估算。",
+    },
+  ],
+  sourceDocuments: [terms("明康護理", "銀卡住院", "v1.6", "2025-05-10")],
+  verification: {
+    status: "demo",
+    lastReviewedAt: "2025-12-18",
+    unverifiedFields: ["全部欄位"],
+  },
+  paymentOptions: ["按年繳付"],
+  termsVersion: "v1.6",
+  updatedAt: "2025-12-18",
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 9. 明康 · 輕疾（尚未核實）
+// ------------------------------------------------------------
+export const productBcCi01: InsuranceProduct = {
+  id: "bc-ci-01",
+  slug: "brightcare-early-critical-illness",
+  name: "明康「早期」危疾保障計劃",
+  nameEn: "BrightCare Early Critical Illness",
+  insurerId: "brightcare",
+  category: "critical-illness",
+  tagline: "針對早期危疾的較低保額保障",
+  description:
+    "只覆蓋條款列明的早期危疾，保額較一般危疾計劃低，作用是讓早期發現時能有一筆一次性賠付，用於較昂貴的早期治療。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 55,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: false,
+    notes: ["只覆蓋條款列明的早期危疾"],
+  },
+  coverage: [
+    {
+      id: "bc-ci-01-c1",
+      category: "critical",
+      name: "早期癌症保障",
+      summary: "確診條款定義的早期癌症。",
+      limit: "HK$100,000 – HK$500,000",
+      highlight: true,
+      sourceIds: ["src-bc-ci-01-terms"],
+    },
+    {
+      id: "bc-ci-01-c2",
+      category: "critical",
+      name: "早期心臟病保障",
+      summary: "須符合條款列明的早期心臟病定義。",
+      limit: "HK$100,000 – HK$500,000",
+      sourceIds: ["src-bc-ci-01-terms"],
+    },
+    {
+      id: "bc-ci-01-c3",
+      category: "critical",
+      name: "器官早期病變保障",
+      summary: "條款列明的器官早期病變情況。",
+      limit: "HK$80,000 – HK$300,000",
+      sourceIds: ["src-bc-ci-01-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "bc-ci-01-e1",
+      name: "已屬後期危疾的情況",
+      description:
+        "已符合後期危疾定義的病情，只按後期條款處理，不適用本計劃。",
+      sourceIds: ["src-bc-ci-01-terms"],
+    },
+    {
+      id: "bc-ci-01-e2",
+      name: "非條款列明的早期定義",
+      description: "臨床定義與條款定義不一致時，以條款為準。",
+      sourceIds: ["src-bc-ci-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: false,
+    sourceIds: [],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: true,
+    value: "90 日",
+    sourceIds: ["src-bc-ci-01-terms"],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "不保證續保",
+    description: "不保證續保，保費按屆時年齡重新計算。",
+    sourceIds: ["src-bc-ci-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "30 歲・非吸煙",
+      assumptions: "30 歲、非吸煙、保額 HK$300,000",
+      annualPremium: 1320,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["保費較低", "針對早期危疾", "可與醫療保險搭配"],
+  termPoints: [
+    {
+      title: "早期定義必須逐項看",
+      detail:
+        "「早期」在不同條款裏指不同的事。例如某個計劃只賠原位癌，另一個可能賠第 1 期，兩者保費差距遠大於保額差距。",
+    },
+  ],
+  sourceDocuments: [terms("明康護理", "早期危疾", "v1.1", "2025-04-01")],
+  verification: {
+    status: "unverified",
+    lastReviewedAt: "2025-12-20",
+    unverifiedFields: ["早期定義清單", "保費示例數字"],
+  },
+  paymentOptions: ["按年繳付", "按月繳付"],
+  termsVersion: "v1.1",
+  updatedAt: "2025-12-20",
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 10. 先驅 · 家庭人壽（部分核實）
+// ------------------------------------------------------------
+export const productPaLife01: InsuranceProduct = {
+  id: "pa-life-01",
+  slug: "pioneer-family-protection",
+  name: "先驅「家安」家庭人壽保障",
+  nameEn: "Pioneer Family Protection",
+  insurerId: "pioneer-assurance",
+  category: "life",
+  tagline: "以家庭為單位的定期人壽保障",
+  description:
+    "以家庭為投保單位，主要供有未成年子女、且是家庭主要收入來源的客戶使用。保額按收入需要設定，不含任何儲蓄成分。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 55,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: true,
+    notes: ["須為家庭主要收入來源", "保額上限按年齡及收入審批"],
+  },
+  coverage: [
+    {
+      id: "pa-life-01-c1",
+      category: "death",
+      name: "身故保障",
+      summary: "保障期內身故支付基本保額。",
+      limit: "HK$500,000 – HK$5,000,000（需收入證明）",
+      highlight: true,
+      sourceIds: ["src-pa-life-01-terms"],
+    },
+    {
+      id: "pa-life-01-c2",
+      category: "other",
+      name: "全殘保障",
+      summary: "因保單列明傷殘導致完全失去工作能力。",
+      limit: "與基本保額相同",
+      sourceIds: ["src-pa-life-01-terms"],
+    },
+    {
+      id: "pa-life-01-c3",
+      category: "other",
+      name: "家屬身故保障",
+      summary: "同一保單可為配偶附加輕微的身故保障。",
+      limit: "HK$100,000 – HK$500,000",
+      sourceIds: ["src-pa-life-01-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "pa-life-01-e1",
+      name: "首年自殺不保",
+      description: "首 13 個月內因自殺身故不保。",
+      sourceIds: ["src-pa-life-01-terms"],
+    },
+    {
+      id: "pa-life-01-e2",
+      name: "超出保額的收入需求",
+      description: "保額以經審批的收入需要為上限，超出部分不獲保障。",
+      sourceIds: ["src-pa-life-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: false,
+    sourceIds: [],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: false,
+    sourceIds: [],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "不保證續保",
+      description: "不保證續保，續保時按當時年齡重新定價。",
+    sourceIds: ["src-pa-life-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "38 歲・非吸煙・男性",
+      assumptions: "38 歲、非吸煙、HK$3,000,000 保額、保障至 65 歲",
+      annualPremium: 5400,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["按收入需要設定保額", "可附加配偶保障", "保障年期靈活"],
+  termPoints: [
+    {
+      title: "保額由收入決定，不由產品決定",
+      detail:
+        "這類產品的保額上限取決於你的收入證明。同一產品，有人能買 HK$500 萬，有人只買到 HK$50 萬。",
+    },
+  ],
+  sourceDocuments: [
+    terms("先驅保險", "家安家庭人壽", "v2.3", "2025-08-01"),
+    sheet("先驅保險", "家安家庭人壽", "2025 年版", "2025-08-01"),
+  ],
+  verification: {
+    status: "partially_verified",
+    lastReviewedAt: REVIEWED,
+    unverifiedFields: ["保額上限規則", "保費示例數字"],
+  },
+  paymentOptions: ["按年繳付", "按月繳付"],
+  termsVersion: "v2.3",
+  updatedAt: UPDATED,
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 11. 先驅 · 旅遊（已核實）
+// ------------------------------------------------------------
+export const productPaTravel01: InsuranceProduct = {
+  id: "pa-travel-01",
+  slug: "pioneer-travel-plus",
+  name: "先驅「暢遊」旅遊保險計劃",
+  nameEn: "Pioneer Travel Plus",
+  insurerId: "pioneer-assurance",
+  category: "travel",
+  tagline: "以醫療及緊急救援為主的行程保障",
+  description:
+    "保障行程期間的意外、疾病醫療開支及緊急救援送返費用。適合一至兩週的旅行行程，不保證涵蓋長期旅居。",
+  eligibility: {
+    minAge: 0,
+    maxAge: 75,
+    residency: "須為香港居民",
+    healthDeclaration: false,
+    occupationLimits: false,
+    notes: ["每次行程最長 90 日"],
+  },
+  coverage: [
+    {
+      id: "pa-travel-01-c1",
+      category: "medical",
+      name: "境外醫療費用",
+      summary: "行程期間因意外或疾病產生的醫療開支。",
+      limit: "HK$800,000（每人）",
+      highlight: true,
+      sourceIds: ["src-pa-travel-01-terms"],
+    },
+    {
+      id: "pa-travel-01-c2",
+      category: "trip",
+      name: "緊急救援及送返",
+      summary: "醫療送返及遺體送返費用。",
+      limit: "HK$500,000（每人）",
+      highlight: true,
+      sourceIds: ["src-pa-travel-01-terms"],
+    },
+    {
+      id: "pa-travel-01-c3",
+      category: "trip",
+      name: "行程延誤及取消",
+      summary: "因惡劣天氣或重大事故導致行程延誤或取消。",
+      limit: "每日最高 HK$2,000，最長 10 日",
+      sourceIds: ["src-pa-travel-01-sheet"],
+    },
+    {
+      id: "pa-travel-01-c4",
+      category: "property",
+      name: "行李遺失",
+      summary: "行程期間行李遺失或損壞。",
+      limit: "每人最高 HK$15,000",
+      sourceIds: ["src-pa-travel-01-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "pa-travel-01-e1",
+      name: "危險活動",
+      description:
+        "潛水、滑雪、登山等高危活動期間的意外不保，除非已加購相關附加保障。",
+      sourceIds: ["src-pa-travel-01-terms"],
+    },
+    {
+      id: "pa-travel-01-e2",
+      name: "已在出發前發生的狀況",
+      description: "出發前已出現症狀或已受傷病所致的醫療開支不保。",
+      sourceIds: ["src-pa-travel-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: true,
+    value: "HK$500 每次事故",
+    basis: "每次事故",
+    sourceIds: ["src-pa-travel-01-terms"],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: false,
+    sourceIds: [],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "按每次行程購買",
+    description: "屬一次性保單，每次行程須重新購買，沒有續保概念。",
+    sourceIds: ["src-pa-travel-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "30 歲・7 日行程・亞洲",
+      assumptions: "30 歲、7 日行程、亞洲地區、不含危險活動",
+      annualPremium: 480,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["境外醫療額度高", "含緊急送返", "行程延誤保障"],
+  termPoints: [
+    {
+      title: "看保障範圍是否包含你要去的地方",
+      detail:
+        "不少旅遊保險對特定國家或地區另設限制，亦有對某些活動的除外責任。出發前要逐項核對。",
+    },
+  ],
+  sourceDocuments: [
+    terms("先驅保險", "暢遊旅遊", "v3.2", "2025-10-01"),
+    sheet("先驅保險", "暢遊旅遊", "2025 年版", "2025-10-01"),
+  ],
+  verification: {
+    status: "verified",
+    lastReviewedAt: REVIEWED,
+  },
+  paymentOptions: ["一次性繳付"],
+  termsVersion: "v3.2",
+  updatedAt: UPDATED,
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 12. 先驅 · 自駕旅遊（原型模擬）
+// ------------------------------------------------------------
+export const productPaTravel02: InsuranceProduct = {
+  id: "pa-travel-02",
+  slug: "pioneer-self-drive-travel",
+  name: "先驅「自駕」跨境旅遊保險",
+  nameEn: "Pioneer Self-Drive Travel",
+  insurerId: "pioneer-assurance",
+  category: "travel",
+  tagline: "針對自駕跨境行程的車損與醫療保障",
+  description:
+    "在標準旅遊保障之上，加入自駕車輛車損及跨境道路救援。適合會自己開車跨境或跨境租車的旅客。",
+  eligibility: {
+    minAge: 21,
+    maxAge: 70,
+    residency: "須為香港居民並持有有效駕駛牌照",
+    healthDeclaration: false,
+    occupationLimits: false,
+    notes: ["須持有有效本港駕照滿 2 年", "每次行程最長 30 日"],
+  },
+  coverage: [
+    {
+      id: "pa-travel-02-c1",
+      category: "medical",
+      name: "境外醫療費用",
+      summary: "行程期間的醫療開支，額度高於一般旅遊計劃。",
+      limit: "HK$1,500,000（每人）",
+      highlight: true,
+      sourceIds: ["src-pa-travel-02-terms"],
+    },
+    {
+      id: "pa-travel-02-c2",
+      category: "vehicle",
+      name: "租車車損保障",
+      summary: "租用車輛於行程期間的碰撞損壞。",
+      limit: "自付額 HK$20,000，最高 HK$200,000",
+      highlight: true,
+      sourceIds: ["src-pa-travel-02-terms"],
+    },
+    {
+      id: "pa-travel-02-c3",
+      category: "vehicle",
+      name: "道路救援",
+      summary: "跨境道路上的拋錨、拖車及充電支援。",
+      limit: "每次事故最高 HK$8,000",
+      sourceIds: ["src-pa-travel-02-sheet"],
+    },
+    {
+      id: "pa-travel-02-c4",
+      category: "trip",
+      name: "行程取消",
+      summary: "因惡劣天氣或交通事故導致行程取消。",
+      limit: "每人最高 HK$20,000",
+      sourceIds: ["src-pa-travel-02-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "pa-travel-02-e1",
+      name: "無有效牌照駕駛",
+      description: "由未持有效駕照人士駕駛引致的損失不保。",
+      sourceIds: ["src-pa-travel-02-terms"],
+    },
+    {
+      id: "pa-travel-02-e2",
+      name: "自車車損",
+      description: "使用自己車輛出行時，車輛本身的損壞不在本計劃保障內。",
+      sourceIds: ["src-pa-travel-02-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: true,
+    value: "車損自付額 HK$20,000",
+    basis: "每次事故",
+    sourceIds: ["src-pa-travel-02-terms"],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: false,
+    sourceIds: [],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "按每次行程購買",
+    description: "一次性保單，每次行程重新購買。",
+    sourceIds: ["src-pa-travel-02-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "35 歲・10 日行程・跨境自駕",
+      assumptions: "35 歲、10 日行程、跨境自駕、租車",
+      annualPremium: 1180,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["自駕車損保障", "跨境道路救援", "境外醫療額度高"],
+  termPoints: [
+    {
+      title: "自付額相對保費並不低",
+      detail:
+        "車損自付額 HK$20,000 高於整份保單保費，這是旅遊保險中常見的結構，特價行程更要看清楚。",
+    },
+  ],
+  sourceDocuments: [terms("先驅保險", "自駕跨境旅遊", "v1.3", "2025-12-01")],
+  verification: {
+    status: "demo",
+    lastReviewedAt: "2025-12-22",
+    unverifiedFields: ["全部欄位"],
+  },
+  paymentOptions: ["一次性繳付"],
+  termsVersion: "v1.3",
+  updatedAt: "2025-12-22",
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 13. 先驅 · 家居（尚未核實）
+// ------------------------------------------------------------
+export const productPaHome01: InsuranceProduct = {
+  id: "pa-home-01",
+  slug: "pioneer-home-comprehensive",
+  name: "先驅「安居」家居綜合保險",
+  nameEn: "Pioneer Home Comprehensive",
+  insurerId: "pioneer-assurance",
+  category: "home",
+  tagline: "家居財物、水損及第三者責任保障",
+  description:
+    "保障家居財物因火災、水浸等指定事故造成的損失，以及因家居事故引致的第三者人身或財物赔偿责任。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 75,
+    residency: "須為香港業主或租客",
+    healthDeclaration: false,
+    occupationLimits: false,
+    notes: ["須為投保單上列明的處所投保", "租客投保須取得業主同意"],
+  },
+  coverage: [
+    {
+      id: "pa-home-01-c1",
+      category: "property",
+      name: "家居財物保障",
+      summary: "因指定事故導致的家居財物損失，按重置價值計算。",
+      limit: "最高 HK$800,000",
+      highlight: true,
+      sourceIds: ["src-pa-home-01-terms"],
+    },
+    {
+      id: "pa-home-01-c2",
+      category: "property",
+      name: "室內裝修保障",
+      summary: "因指定事故造成的裝修及固定設施損失。",
+      limit: "最高 HK$300,000",
+      highlight: true,
+      sourceIds: ["src-pa-home-01-terms"],
+    },
+    {
+      id: "pa-home-01-c3",
+      category: "liability",
+      name: "第三者責任保障",
+      summary: "因家居意外引致第三者人身傷亡或財物損失的賠償。",
+      limit: "最高 HK$1,000,000",
+      highlight: true,
+      sourceIds: ["src-pa-home-01-sheet"],
+    },
+    {
+      id: "pa-home-01-c4",
+      category: "other",
+      name: "臨時住所費用",
+      summary: "因保障事故導致住所不可居住期間的臨時住宿開支。",
+      limit: "每日最高 HK$2,000，最長 12 個月",
+      sourceIds: ["src-pa-home-01-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "pa-home-01-e1",
+      name: "未有申報的貴重物品",
+      description: "超出保單列明上限的貴重物品不獲保障。",
+      sourceIds: ["src-pa-home-01-terms"],
+    },
+    {
+      id: "pa-home-01-e2",
+      name: "空置或長期無人居住",
+      description: "連續空置超過 90 日期間發生的事故不保。",
+      sourceIds: ["src-pa-home-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: true,
+    value: "每次事故 HK$2,000",
+    basis: "每次事故",
+    sourceIds: ["src-pa-home-01-terms"],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: false,
+    sourceIds: [],
+  },
+  renewal: {
+    type: "guaranteed_renewal",
+    label: "保證續保 1 年",
+    description: "每個保單年度結束後續保，條款內容不會因續保而改變。",
+    years: 1,
+    sourceIds: ["src-pa-home-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "兩房單位・自住",
+      assumptions: "約 500 平方呎自住單位、標準樓宇",
+      annualPremium: 1980,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["室內裝修單獨保障", "第三者責任額度高", "含臨時住宿費用"],
+  termPoints: [
+    {
+      title: "自付額與家居事故頻率",
+      detail:
+        "家居保險的自付額通常不高，但水浸等事故的頻率取決於住所狀況，例如是否靠近水管、是否在低層。",
+    },
+  ],
+  sourceDocuments: [terms("先驅保險", "安居家居", "v1.8", "2025-07-15")],
+  verification: {
+    status: "unverified",
+    lastReviewedAt: "2025-12-26",
+    unverifiedFields: ["保障範圍細項", "保費示例數字"],
+  },
+  paymentOptions: ["按年繳付"],
+  termsVersion: "v1.8",
+  updatedAt: "2025-12-26",
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 14. 先驅 · 儲蓄退休（部分核實）
+// ------------------------------------------------------------
+export const productPaSavings01: InsuranceProduct = {
+  id: "pa-savings-01",
+  slug: "pioneer-retirement-savings",
+  name: "先驅「長積」儲蓄退休計劃",
+  nameEn: "Pioneer Retirement Savings Plan",
+  insurerId: "pioneer-assurance",
+  category: "savings-retirement",
+  tagline: "以退休供款為目標的儲蓄型產品",
+  description:
+    "以累積退休儲蓄為目標，附帶身故保障。此類產品的非保證利益（紅利）取決於投資表現，應把保證與非保證部分分開看。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 65,
+    residency: "須為香港居民",
+    healthDeclaration: true,
+    occupationLimits: false,
+    notes: ["建議於 40 歲前開始投保", "須符合最低年繳保費"],
+  },
+  coverage: [
+    {
+      id: "pa-savings-01-c1",
+      category: "retirement",
+      name: "退休供款累積",
+      summary: "保費連同非保證紅利累積成退休儲蓄。",
+      limit: "按保單列明的紅利表，非保證",
+      highlight: true,
+      sourceIds: ["src-pa-savings-01-terms"],
+    },
+    {
+      id: "pa-savings-01-c2",
+      category: "death",
+      name: "身故保障",
+      summary: "身故時支付基本保額予受益人。",
+      limit: "HK$100,000 – HK$1,000,000",
+      highlight: true,
+      sourceIds: ["src-pa-savings-01-terms"],
+    },
+    {
+      id: "pa-savings-01-c3",
+      category: "retirement",
+      name: "終身提取選項",
+      summary: "到達指定年齡後可選擇終身提取。",
+      limit: "按保單列明的提取方式",
+      sourceIds: ["src-pa-savings-01-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "pa-savings-01-e1",
+      name: "紅利不保證",
+      description: "非保證紅利並非保險公司承諾，最低可能為零。",
+      sourceIds: ["src-pa-savings-01-terms"],
+    },
+    {
+      id: "pa-savings-01-e2",
+      name: "早期退保的損失",
+      description: "早於指定年期退保會被扣除部分累積價值。",
+      sourceIds: ["src-pa-savings-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: false,
+    sourceIds: [],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: true,
+    value: "90 日（身故保障不適用）",
+    sourceIds: ["src-pa-savings-01-terms"],
+  },
+  renewal: {
+    type: "guaranteed_renewal",
+    label: "保證續保至 65 歲",
+    description: "續保期間保費按公司條款調整，保證利益不受影響。",
+    sourceIds: ["src-pa-savings-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "30 歲・每年供款 HK$50,000",
+      assumptions: "30 歲、每年供款 HK$50,000、繳付 10 年",
+      annualPremium: 50000,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["保證與非保證利益分開列示", "可選終身提取", "附帶身故保障"],
+  termPoints: [
+    {
+      title: "把保證與非保證分開算",
+      detail:
+        "比較這類產品時，最低只應以保證部分計算。用樂觀的紅利演示去比較，結論往往會完全相反。",
+    },
+  ],
+  sourceDocuments: [
+    terms("先驅保險", "長積儲蓄退休", "v2.1", "2025-06-20"),
+    sheet("先驅保險", "長積儲蓄退休", "2025 年版", "2025-06-20"),
+  ],
+  verification: {
+    status: "partially_verified",
+    lastReviewedAt: "2026-01-10",
+    unverifiedFields: ["紅利演示數字", "提取方式的具體條款"],
+  },
+  paymentOptions: ["按年繳付", "按月繳付"],
+  termsVersion: "v2.1",
+  updatedAt: "2026-01-10",
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 15. 港盾 · 汽車（原型模擬）
+// ------------------------------------------------------------
+export const productHsMotor01: InsuranceProduct = {
+  id: "hs-motor-01",
+  slug: "harbor-shield-motor-plan",
+  name: "港盾「安途」私家車保險",
+  nameEn: "Harbor Shield Motor Plan",
+  insurerId: "harbor-shield",
+  category: "motor",
+  tagline: "以使用性質及駕駛人紀錄定保費的車險",
+  description:
+    "私家車綜合保險。第三者責任額度高，並按駕駛人年齡、經驗及車齡分級定保費。示範同一平台如何處理另一種完全不同結構的產品。",
+  eligibility: {
+    minAge: 18,
+    maxAge: 75,
+    residency: "須為香港居民並持有有效駕照",
+    healthDeclaration: false,
+    occupationLimits: false,
+    notes: ["需申報主要駕駛人", "持牌年資影響保費分級"],
+  },
+  coverage: [
+    {
+      id: "hs-motor-01-c1",
+      category: "liability",
+      name: "第三者責任保障",
+      summary: "車禍中引致第三者人身傷亡或財物損失的賠償責任。",
+      limit: "最高 HK$20,000,000",
+      highlight: true,
+      sourceIds: ["src-hs-motor-01-terms"],
+    },
+    {
+      id: "hs-motor-01-c2",
+      category: "vehicle",
+      name: "車損保障",
+      summary: "車輛因碰撞或盜竊造成的損失。",
+      limit: "按重置價值，自付額 HK$5,000",
+      highlight: true,
+      sourceIds: ["src-hs-motor-01-terms"],
+    },
+    {
+      id: "hs-motor-01-c3",
+      category: "property",
+      name: "車內個人物品",
+      summary: "車內個人物品因車禍受損。",
+      limit: "最高 HK$5,000",
+      sourceIds: ["src-hs-motor-01-sheet"],
+    },
+  ],
+  exclusions: [
+    {
+      id: "hs-motor-01-e1",
+      name: "未經批准的駕駛人",
+      description: "由未在保單申報的駕駛人駕駛引致的損失不保。",
+      sourceIds: ["src-hs-motor-01-terms"],
+    },
+    {
+      id: "hs-motor-01-e2",
+      name: "車身磨損及內部損壞",
+      description: "漆面磨損、車內飾物損壞不屬車損保障範圍。",
+      sourceIds: ["src-hs-motor-01-terms"],
+    },
+  ],
+  deductible: {
+    hasDeductible: true,
+    value: "車損自付額 HK$5,000",
+    basis: "每次事故",
+    sourceIds: ["src-hs-motor-01-terms"],
+  },
+  waitingPeriod: {
+    hasWaitingPeriod: false,
+    sourceIds: [],
+  },
+  renewal: {
+    type: "non_guaranteed",
+    label: "不保證續保",
+    description:
+      "車險按年續保，保險公司可按索償紀錄及市場情況調整保費，亦可拒絕續保。",
+    sourceIds: ["src-hs-motor-01-terms"],
+  },
+  premiumExamples: [
+    {
+      label: "30 歲駕駛・私家車",
+      assumptions: "30 歲、持牌 5 年、1200cc 私家車",
+      annualPremium: 6800,
+      currency: "HKD",
+      isExample: true,
+      sourceIds: [],
+    },
+  ],
+  features: ["第三者責任額度高", "按持牌年資分級", "涵蓋車內物品"],
+  termPoints: [
+    {
+      title: "車險的核心變數是索償紀錄",
+      detail:
+        "同一部車、同一個人，續保時保費可能相差數倍。比較車險時，重點是續保機制而非單一保費數字。",
+    },
+  ],
+  sourceDocuments: [terms("港盾保險", "安途私家車", "v1.2", "2025-11-01")],
+  verification: {
+    status: "demo",
+    lastReviewedAt: "2025-12-30",
+    unverifiedFields: ["全部欄位"],
+  },
+  paymentOptions: ["按年繳付"],
+  termsVersion: "v1.2",
+  updatedAt: "2025-12-30",
+  isDemo: true,
+};
+
+// ------------------------------------------------------------
+// 匯出
+// ------------------------------------------------------------
+
 export const products: InsuranceProduct[] = [
-  {
-    id: "hs-med-01",
-    name: "Harbor Shield 住院醫療保（自付額 HK$0 示範版）",
-    insurer: "Harbor Shield",
-    category: "醫療保險",
-    simulatedPremium: 4980,
-    coverageLimit: 10000000,
-    coverageLimitLabel: "最高 HK$10,000,000",
-    deductible: "HK$0（示範設定）",
-    waitingPeriod: "住院保障 30 日；意外 0 日",
-    renewalTerms: "每年續保，保費按年齡調整，不保證固定",
-    coverageSummary:
-      "示範方案：以住院醫療費用為主，示範設定自付額為零，並按年重設保費。",
-    keyFeatures: ["示範住院費用全數受保（受條款限制）", "示範不設終身自付額上限"],
-    features: ["零自付額示範", "可選自付額", "全球覆蓋示範"],
-    coverageItems: [
-      {
-        name: "住院病房費用",
-        description: "示範涵蓋私家病房及指定級別病房嘅住院收費。",
-        simulatedLimit: "最高 HK$10,000,000",
-        keyLimit: "須由網絡醫院提供，私人開支不涵蓋",
-      },
-      {
-        name: "醫生及專科費用",
-        description: "示範涵蓋住院期間嘅主診醫生及專科醫生費用。",
-        simulatedLimit: "與住院保障共用上限",
-        keyLimit: "須先經預先授權",
-      },
-      {
-        name: "手術費用",
-        description: "示範涵蓋列明手術嘅手術室及麻醉費用。",
-        simulatedLimit: "與住院保障共用上限",
-        keyLimit: "非必要性手術可能不獲保障",
-      },
-      {
-        name: "出院後護理",
-        description: "示範涵蓋出院後 90 日內指定護理服務。",
-        simulatedLimit: "最高 HK$100,000",
-        keyLimit: "須為指定服務供應商",
-      },
-    ],
-    exclusions: [
-      "非必要美容或非治療性手術",
-      "因投保人自身行為引致嘅傷害",
-      "保單生效前已存在嘅症狀",
-    ],
-    termPoints: {
-      coverageScope: [
-        "住院病房、醫生、專科及手術費用",
-        "出院後 90 日指定護理",
-        "示範設定自付額為零",
-      ],
-      exclusions: [
-        "非治療性或美容程序",
-        "投保前已存在症狀",
-        "未經預先授權嘅急症以外的住院安排",
-      ],
-      waitingPeriod: "住院保障 30 日，意外原因不受此限。",
-      deductible: "示範設定 HK$0；一般市面產品多設有自付額。",
-      renewal: "每年續保，保費按年齡及理賠紀錄調整。",
-      needToConfirm: [
-        "指定病房級別嘅實際定義",
-        "網絡醫院名單及更新頻率",
-        "「必要性」嘅判定準則",
-      ],
-    },
-    premiumNote: "此保費為虛構示例，用以展示比較功能。",
-    updatedAt: "2026-09-18",
-    isDemo: true,
-  },
-  {
-    id: "hs-med-02",
-    name: "Harbor Shield 門診醫療卡（示範）",
-    insurer: "Harbor Shield",
-    category: "醫療保險",
-    simulatedPremium: 2380,
-    coverageLimit: 500000,
-    coverageLimitLabel: "最高 HK$500,000",
-    deductible: "每次 HK$300（示範設定）",
-    waitingPeriod: "門診保障 30 日",
-    renewalTerms: "每年續保，保費不保證不變",
-    coverageSummary:
-      "示範方案：涵蓋門診及指定檢查，設有每次自付額，用以示範自付額對成本的影響。",
-    keyFeatures: ["示範每次自付額 HK$300", "示範涵蓋門診及預防檢查"],
-    features: ["門診保障", "有自付額", "預防檢查"],
-    coverageItems: [
-      {
-        name: "門診治療",
-        description: "示範涵蓋指定診所嘅門診治療費用。",
-        simulatedLimit: "最高 HK$500,000",
-        keyLimit: "每次 HK$300 自付額",
-      },
-      {
-        name: "處方藥物",
-        description: "示範涵蓋指定藥物清單內嘅處方藥。",
-        simulatedLimit: "最高 HK$100,000",
-        keyLimit: "限指定清單及劑量",
-      },
-      {
-        name: "預防檢查",
-        description: "示範每年提供一次指定健康檢查。",
-        simulatedLimit: "每次 HK$3,000",
-        keyLimit: "限指定檢查項目",
-      },
-    ],
-    exclusions: ["非指定診所嘅門診", "非處方及保健產品", "懷孕相關門診（除指定產檢）"],
-    termPoints: {
-      coverageScope: ["門診治療", "指定處方藥物", "每年一次預防檢查"],
-      exclusions: ["非指定診所", "保健及非處方產品", "懷孕門診（指定產檢除外）"],
-      waitingPeriod: "門診保障 30 日。",
-      deductible: "每次門診 HK$300，示範用。",
-      renewal: "每年續保，次年自付額可能調整。",
-      needToConfirm: ["指定診所名單", "藥物清單", "檢查項目範圍"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-09-12",
-    isDemo: true,
-  },
-  {
-    id: "ml-ci-01",
-    name: "Maple Life 危疾保障（基本示範）",
-    insurer: "Maple Life",
-    category: "危疾保險",
-    simulatedPremium: 3200,
-    coverageLimit: 1000000,
-    coverageLimitLabel: "HK$1,000,000 一次性",
-    deductible: "不適用（一次性理賠示範）",
-    waitingPeriod: "90 日（特定疾病 180 日）",
-    renewalTerms: "保費固定年期不變，其後按年重新定價",
-    coverageSummary:
-      "示範方案：於符合指定疾病定義時提供一次性保障金，適合用來了解危疾保險嘅基本結構。",
-    keyFeatures: ["示範一次性理賠", "示範涵蓋 30 種指定疾病"],
-    features: ["一次性理賠", "受保人可豁免保費（示範）", "指定疾病定義"],
-    coverageItems: [
-      {
-        name: "癌症保障",
-        description: "示範涵蓋初次確診指定癌症。",
-        simulatedLimit: "HK$1,000,000",
-        keyLimit: "須符合疾病定義及等候期",
-      },
-      {
-        name: "心臟病保障",
-        description: "示範涵蓋初次心臟病發作。",
-        simulatedLimit: "HK$1,000,000",
-        keyLimit: "須符合疾病定義及等候期",
-      },
-      {
-        name: "中風保障",
-        description: "示例涵蓋中風後需持續符合定義。",
-        simulatedLimit: "HK$1,000,000",
-        keyLimit: "對工作能力有要求",
-      },
-      {
-        name: "身故保障",
-        description: "示範於保單期間身故提供保障。",
-        simulatedLimit: "HK$1,000,000",
-        keyLimit: "首年等候期內身故除外",
-      },
-    ],
-    exclusions: ["等候期內發病", "投保前已存在嘅症狀", "因職業運動引致嘅特定情況"],
-    termPoints: {
-      coverageScope: ["30 種指定疾病一次性保障金", "保單期間身故保障", "保費豁免（示範）"],
-      exclusions: ["等候期內首次確診", "既往症狀", "酒精或藥物相關情況"],
-      waitingPeriod: "一般 90 日，特定嚴重疾病 180 日。",
-      deductible: "危疾保險一般不設自付額。",
-      renewal: "固定年期保費不變；年期屆滿後按年重新定價。",
-      needToConfirm: ["疾病定義全文", "「持續符合」嘅判定方式", "重新定價嘅可能幅度"],
-    },
-    premiumNote: "此保費為虛構示例，不代表任何投保條件。",
-    updatedAt: "2026-08-30",
-    isDemo: true,
-  },
-  {
-    id: "ml-ci-02",
-    name: "Maple Life 危疾保障（多次理賠示範）",
-    insurer: "Maple Life",
-    category: "危疾保險",
-    simulatedPremium: 5450,
-    coverageLimit: 2000000,
-    coverageLimitLabel: "最高 HK$2,000,000（示範）",
-    deductible: "不適用",
-    waitingPeriod: "90 日（特定疾病 180 日）",
-    renewalTerms: "保費固定年期不變，其後按年重新定價",
-    coverageSummary:
-      "示範方案：喺基本方案之外加入多次理賠示範特性，用以比較保障上限與保費嘅關係。",
-    keyFeatures: ["示範最高 HK$2,000,000", "示範可多次理賠"],
-    features: ["多次理賠", "較高保障上限", "受保人保費豁免"],
-    coverageItems: [
-      {
-        name: "癌症多次保障",
-        description: "示範就不同癌症提供多次理賠，每次設有獨立上限。",
-        simulatedLimit: "每次最高 HK$1,000,000",
-        keyLimit: "設有間隔期及次數上限",
-      },
-      {
-        name: "心臟病保障",
-        description: "示範涵蓋指定心臟疾病。",
-        simulatedLimit: "HK$2,000,000",
-        keyLimit: "須符合定義",
-      },
-      {
-        name: "器官功能失調保障",
-        description: "示範涵蓋指定器官功能失調。",
-        simulatedLimit: "HK$1,000,000",
-        keyLimit: "一般須符合 6 個月定義",
-      },
-    ],
-    exclusions: ["等候期內首次確診", "同一事故內多次受保", "非指定併發症"],
-    termPoints: {
-      coverageScope: ["多次癌症理賠", "較高整體上限", "保費豁免（示範）"],
-      exclusions: ["間隔期內再次理賠", "同一事故", "非指定併發症"],
-      waitingPeriod: "90 日，特定疾病 180 日。",
-      deductible: "不適用。",
-      renewal: "固定年期後按年重新定價。",
-      needToConfirm: ["每次理賠間隔期長度", "最高理賠次數", "上限是否設年度總額"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-08-30",
-    isDemo: true,
-  },
-  {
-    id: "ml-life-01",
-    name: "Maple Life 定期人壽（教育／家庭責任示範）",
-    insurer: "Maple Life",
-    category: "人壽保險",
-    simulatedPremium: 1880,
-    coverageLimit: 1500000,
-    coverageLimitLabel: "HK$1,500,000 身故保障",
-    deductible: "不適用",
-    waitingPeriod: "0 日",
-    renewalTerms: "逐年續保，保費隨年齡調整",
-    coverageSummary:
-      "示範方案：為指定年期提供身故保障，適合用來了解人壽保險同儲蓄嘅分別。",
-    keyFeatures: ["示範身故保障 HK$1,500,000", "逐年續保"],
-    features: ["定期壽險", "逐年續保", "無儲蓄成分（示範）"],
-    coverageItems: [
-      {
-        name: "身故保障",
-        description: "示範於保單期間身故提供一筆保障金。",
-        simulatedLimit: "HK$1,500,000",
-        keyLimit: "首 12 個月內可能有等待期",
-      },
-      {
-        name: "完全永久傷殘保障",
-        description: "示範涵蓋符合定義嘅完全永久傷殘。",
-        simulatedLimit: "HK$1,500,000",
-        keyLimit: "須符合定義及評估",
-      },
-    ],
-    exclusions: ["首 12 個月內非意外身故（示範）", "參與高危活動期間", "已申報嘅既有疾病惡化"],
-    termPoints: {
-      coverageScope: ["身故保障", "完全永久傷殘保障", "每年續保"],
-      exclusions: ["首年非意外身故（示範限制）", "高危活動期間", "既有疾病惡化"],
-      waitingPeriod: "身故保障 0 日，另有首年條款限制。",
-      deductible: "不適用。",
-      renewal: "逐年續保，保費隨年齡調整。",
-      needToConfirm: ["續保保費調整幅度", "職業類別限制", "是否需要體檢"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-07-22",
-    isDemo: true,
-  },
-  {
-    id: "bc-med-01",
-    name: "BrightCare 醫療_plus 住院計劃（示範）",
-    insurer: "BrightCare",
-    category: "醫療保險",
-    simulatedPremium: 7600,
-    coverageLimit: 20000000,
-    coverageLimitLabel: "最高 HK$20,000,000",
-    deductible: "HK$0（示範設定）",
-    waitingPeriod: "住院保障 30 日",
-    renewalTerms: "保費按年調整，續保須經審批",
-    coverageSummary:
-      "示範方案：較高保障上限，續保須經審批，用以展示續保條件差異對比較嘅影響。",
-    keyFeatures: ["示範上限 HK$20,000,000", "示範續保需審批"],
-    features: ["高保障上限", "零自付額示範", "續保需審批"],
-    coverageItems: [
-      {
-        name: "私家病房住院",
-        description: "示範涵蓋私家病房住院收費。",
-        simulatedLimit: "最高 HK$20,000,000",
-        keyLimit: "須由指定醫院提供",
-      },
-      {
-        name: "非住院手術",
-        description: "示範涵蓋列明嘅非住院手術。",
-        simulatedLimit: "最高 HK$500,000",
-        keyLimit: "限指定手術清單",
-      },
-      {
-        name: "器官移植",
-        description: "示範涵蓋器官移植相關費用。",
-        simulatedLimit: "最高 HK$2,000,000",
-        keyLimit: "須先經個案審批",
-      },
-    ],
-    exclusions: ["非必要程序", "非指定醫院", "等候期內嘅非意外事件"],
-    termPoints: {
-      coverageScope: ["高上限住院保障", "非住院手術", "器官移植（需審批）"],
-      exclusions: ["非必要程序", "非指定醫院", "自費升級病房差額"],
-      waitingPeriod: "住院保障 30 日。",
-      deductible: "示範 HK$0。",
-      renewal: "續保並非保證，須按公司當時安排審批。",
-      needToConfirm: ["續保審批準則", "指定醫院名單", "自費項目清單"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-09-05",
-    isDemo: true,
-  },
-  {
-    id: "bc-med-02",
-    name: "BrightCare 慢性病管理計劃（示範）",
-    insurer: "BrightCare",
-    category: "醫療保險",
-    simulatedPremium: 3150,
-    coverageLimit: 800000,
-    coverageLimitLabel: "最高 HK$800,000",
-    deductible: "每年 HK$2,000（示範設定）",
-    waitingPeriod: "180 日",
-    renewalTerms: "每年續保，保費按年齡調整",
-    coverageSummary:
-      "示範方案：針對已確診慢性病人士嘅門診及藥物管理，設有較長等候期及年度自付額。",
-    keyFeatures: ["示範慢性病管理", "示範年度自付額 HK$2,000"],
-    features: ["慢性病管理", "年度自付額", "長等候期示範"],
-    coverageItems: [
-      {
-        name: "慢病門診",
-        description: "示範涵蓋指定慢性病嘅定期覆診。",
-        simulatedLimit: "最高 HK$800,000",
-        keyLimit: "每年 HK$2,000 自付額",
-      },
-      {
-        name: "長期處方藥",
-        description: "示範涵蓋指定慢病藥物。",
-        simulatedLimit: "最高 HK$200,000",
-        keyLimit: "限指定藥物清單",
-      },
-      {
-        name: "健康管理服務",
-        description: "示範提供定期健康檢視及管理服務。",
-        simulatedLimit: "每年 4 次",
-        keyLimit: "須預先登記",
-      },
-    ],
-    exclusions: ["非指定慢病", "非指定藥物", "急症及住院（須用住院計劃）"],
-    termPoints: {
-      coverageScope: ["慢病門診覆診", "長期處方藥", "健康管理服務"],
-      exclusions: ["急症及住院費用", "非指定慢病", "非指定藥物"],
-      waitingPeriod: "180 日，示範用。",
-      deductible: "每年 HK$2,000，示範用。",
-      renewal: "每年續保，保費按年齡調整。",
-      needToConfirm: ["可接受嘅慢病種類", "藥物清單", "年度自付額是否設上限"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-09-05",
-    isDemo: true,
-  },
-  {
-    id: "bc-ci-01",
-    name: "BrightCare 早期危疾保障（示範）",
-    insurer: "BrightCare",
-    category: "危疾保險",
-    simulatedPremium: 2650,
-    coverageLimit: 750000,
-    coverageLimitLabel: "HK$750,000 一次性",
-    deductible: "不適用",
-    waitingPeriod: "60 日",
-    renewalTerms: "保費固定年期不變，其後按年重新定價",
-    coverageSummary:
-      "示範方案：較短等候期但較低保費，同基本危疾方案形成對照。",
-    keyFeatures: ["示範等候期 60 日", "示範低保費"],
-    features: ["較短等候期", "較低保費", "疾病定義較少（示範）"],
-    coverageItems: [
-      {
-        name: "早期癌症保障",
-        description: "示範涵蓋早期特定癌症。",
-        simulatedLimit: "HK$750,000",
-        keyLimit: "限指定早期分類",
-      },
-      {
-        name: "心臟病保障",
-        description: "示範涵蓋初次心臟病發作。",
-        simulatedLimit: "HK$750,000",
-        keyLimit: "須符合定義",
-      },
-      {
-        name: "身故保障",
-        description: "示範於保單期間身故提供保障。",
-        simulatedLimit: "HK$750,000",
-        keyLimit: "等候期內除外",
-      },
-    ],
-    exclusions: ["等候期內發病", "指定清單以外嘅癌症分類", "復發性癌症（示範）"],
-    termPoints: {
-      coverageScope: ["早期癌症", "心臟病", "身故保障"],
-      exclusions: ["等候期內發病", "清單以外分類", "復發（示範限制）"],
-      waitingPeriod: "60 日。",
-      deductible: "不適用。",
-      renewal: "固定年期後按年重新定價。",
-      needToConfirm: ["早期分類定義", "疾病數目", "復發是否受保"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-08-15",
-    isDemo: true,
-  },
-  {
-    id: "pa-life-01",
-    name: "Pioneer Assurance 家庭人壽保障（示範）",
-    insurer: "Pioneer Assurance",
-    category: "人壽保險",
-    simulatedPremium: 4100,
-    coverageLimit: 3000000,
-    coverageLimitLabel: "HK$3,000,000 身故保障",
-    deductible: "不適用",
-    waitingPeriod: "0 日",
-    renewalTerms: "固定年期不變，示範包含 10 年保單年期",
-    coverageSummary:
-      "示範方案：較長固定年期，適合用來比較「固定年期」同「逐年續保」嘅分別。",
-    keyFeatures: ["示範固定 10 年保單年期", "示範較高身故保障"],
-    features: ["固定年期", "身故保障", "無儲蓄成分（示範）"],
-    coverageItems: [
-      {
-        name: "身故保障",
-        description: "示範於保單期間身故提供保障金。",
-        simulatedLimit: "HK$3,000,000",
-        keyLimit: "首年可能有等待期",
-      },
-      {
-        name: "完全永久傷殘",
-        description: "示範涵蓋符合定義嘅完全永久傷殘。",
-        simulatedLimit: "HK$3,000,000",
-        keyLimit: "須經評估",
-      },
-    ],
-    exclusions: ["首年非意外身故（示範）", "高危職業", "戰爭及恐怖活動"],
-    termPoints: {
-      coverageScope: ["身故保障", "完全永久傷殘", "10 年固定保單年期"],
-      exclusions: ["首年條款限制", "高危活動", "戰爭"],
-      waitingPeriod: "0 日，另有首年條款。",
-      deductible: "不適用。",
-      renewal: "10 年內保費不變，之後按年重新定價。",
-      needToConfirm: ["首年等待期內容", "職業限制", "重新定價安排"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-06-28",
-    isDemo: true,
-  },
-  {
-    id: "pa-travel-01",
-    name: "Pioneer Assurance 旅遊保險（基本示範）",
-    insurer: "Pioneer Assurance",
-    category: "旅遊保險",
-    simulatedPremium: 680,
-    coverageLimit: 500000,
-    coverageLimitLabel: "最高 HK$500,000",
-    deductible: "每次 HK$100（示範設定）",
-    waitingPeriod: "0 日",
-    renewalTerms: "單次旅程，期滿後不可續保",
-    coverageSummary:
-      "示範方案：涵蓋醫療、行程延誤及行李損失，適合用來理解短期保險嘅結構。",
-    keyFeatures: ["示範行程延誤保障", "示範單次旅程"],
-    features: ["短期保障", "行程延誤", "行李保障"],
-    coverageItems: [
-      {
-        name: "海外醫療費用",
-        description: "示範涵蓋旅程期間嘅緊急醫療費用。",
-        simulatedLimit: "最高 HK$500,000",
-        keyLimit: "每次 HK$100 自付額",
-      },
-      {
-        name: "行程延誤",
-        description: "示範涵蓋因指定原因導致嘅行程延誤。",
-        simulatedLimit: "每日最高 HK$1,000",
-        keyLimit: "最少延誤 6 小時",
-      },
-      {
-        name: "行李遺失或損壞",
-        description: "示範涵蓋隨身行李嘅遺失或損壞。",
-        simulatedLimit: "最高 HK$20,000",
-        keyLimit: "單件上限 HK$3,000",
-      },
-    ],
-    exclusions: ["參與高危活動期間", "自行增加風險嘅行為", "未申報嘅貴重物品"],
-    termPoints: {
-      coverageScope: ["海外醫療", "行程延誤", "行李"],
-      exclusions: ["高危活動", "戰爭及恐怖活動", "可避免嘅延誤"],
-      waitingPeriod: "0 日。",
-      deductible: "每次 HK$100，示範用。",
-      renewal: "單次旅程，不可續保。",
-      needToConfirm: ["受保地區清單", "活動清單", "延誤嘅最低時數"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-09-20",
-    isDemo: true,
-  },
-  {
-    id: "pa-travel-02",
-    name: "Pioneer Assurance 旅遊保險（全年示範）",
-    insurer: "Pioneer Assurance",
-    category: "旅遊保險",
-    simulatedPremium: 1450,
-    coverageLimit: 1000000,
-    coverageLimitLabel: "最高 HK$1,000,000",
-    deductible: "不適用",
-    waitingPeriod: "0 日",
-    renewalTerms: "一年期，可續保",
-    coverageSummary:
-      "示範方案：涵蓋多次離港旅程嘅全年保障，用以比較年期對保費嘅影響。",
-    keyFeatures: ["示範全年多次旅程", "示範較高醫療上限"],
-    features: ["全年保障", "多次旅程", "取消保障"],
-    coverageItems: [
-      {
-        name: "海外醫療費用",
-        description: "示範涵蓋全年內每次旅程嘅醫療費用。",
-        simulatedLimit: "最高 HK$1,000,000",
-        keyLimit: "不限次數但受年度上限限制",
-      },
-      {
-        name: "行程取消",
-        description: "示範涵蓋因指定原因取消行程嘅損失。",
-        simulatedLimit: "最高 HK$15,000",
-        keyLimit: "須於出發前指定時間內通知",
-      },
-      {
-        name: "個人財物保障",
-        description: "示範涵蓋指定個人物品。",
-        simulatedLimit: "最高 HK$40,000",
-        keyLimit: "單件上限 HK$5,000",
-      },
-    ],
-    exclusions: ["未經批准嘅活動", "已知事件引致嘅損失", "自費升級機位"],
-    termPoints: {
-      coverageScope: ["全年海外醫療", "行程取消", "個人財物"],
-      exclusions: ["未經批准活動", "已知事件", "自費升級"],
-      waitingPeriod: "0 日。",
-      deductible: "示範不設自付額。",
-      renewal: "一年期，續保保費按公司安排調整。",
-      needToConfirm: ["每次旅程最長天數", "地區分級", "年度總上限"],
-    },
-    premiumNote: "此保費為虛構示例。",
-    updatedAt: "2026-09-20",
-    isDemo: true,
-  },
-  {
-    id: "hs-life-01",
-    name: "Harbor Shield 儲蓄壽險（示範）",
-    insurer: "Harbor Shield",
-    category: "人壽保險",
-    simulatedPremium: 6200,
-    coverageLimit: 500000,
-    coverageLimitLabel: "身故保障 HK$500,000",
-    deductible: "不適用",
-    waitingPeriod: "0 日",
-    renewalTerms: "繳付年期固定，期滿後不保證續保",
-    coverageSummary:
-      "示範方案：同時包含身故保障與非保證儲蓄成分，用以說明「有儲蓄」唔等於「有保證回報」。",
-    keyFeatures: ["示範含非保證儲蓄成分", "示範身故保障 HK$500,000"],
-    features: ["儲蓄成分（非保證）", "身故保障", "繳付年期固定"],
-    coverageItems: [
-      {
-        name: "身故保障",
-        description: "示範提供基本身故保障。",
-        simulatedLimit: "HK$500,000",
-        keyLimit: "首年等待期",
-      },
-      {
-        name: "非保證紅利",
-        description: "示範紅利金額不保證，可能為零。",
-        simulatedLimit: "不設保證",
-        keyLimit: "非保證，須參考公司公佈",
-      },
-      {
-        name: "滿期給付",
-        description: "示範以非保證金額支付滿期給付。",
-        simulatedLimit: "不設保證",
-        keyLimit: "受非保證金額影響",
-      },
-    ],
-    exclusions: ["首年等待期內非意外身故", "保費繳付期內欠繳", "紅利被指派嘅相關條款"],
-    termPoints: {
-      coverageScope: ["身故保障", "非保證紅利", "非保證滿期給付"],
-      exclusions: ["等待期限制", "欠繳保費后果", "紅利非保證"],
-      waitingPeriod: "0 日，另有首年等待期條款。",
-      deductible: "不適用。",
-      renewal: "繳付年期固定，期滿後續保並無保證。",
-      needToConfirm: ["紅利計算基礎", "提取限制", "非保證金額嘅披露方式"],
-    },
-    premiumNote: "此保費為虛構示例，儲蓄部分並非保證回報。",
-    updatedAt: "2026-05-30",
-    isDemo: true,
-  },
+  productHsMed01,
+  productHsMed02,
+  productHsLife01,
+  productMlCi01,
+  productMlCi02,
+  productMlLife01,
+  productBcMed01,
+  productBcMed02,
+  productBcCi01,
+  productPaLife01,
+  productPaTravel01,
+  productPaTravel02,
+  productPaHome01,
+  productPaSavings01,
+  productHsMotor01,
 ];
 
-export const brands = [
-  {
-    name: "Harbor Shield",
-    tagline: "示例品牌：以住院及門戶保障為主",
-    founded: "2011（示例年份）",
-    focus: ["醫療保險", "人壽保險"] as const,
-  },
-  {
-    name: "Maple Life",
-    tagline: "示例品牌：以危疾及定期人壽為主",
-    founded: "2008（示例年份）",
-    focus: ["危疾保險", "人壽保險"] as const,
-  },
-  {
-    name: "BrightCare",
-    tagline: "示例品牌：以高上限住院及慢病管理為主",
-    founded: "2016（示例年份）",
-    focus: ["醫療保險", "危疾保險"] as const,
-  },
-  {
-    name: "Pioneer Assurance",
-    tagline: "示例品牌：以旅遊及家庭保障為主",
-    founded: "2005（示例年份）",
-    focus: ["旅遊保險", "人壽保險"] as const,
-  },
-];
+export const productMap: Record<string, InsuranceProduct> = Object.fromEntries(
+  products.map((p) => [p.id, p]),
+);
+
+export function getProduct(id: string): InsuranceProduct | undefined {
+  return productMap[id];
+}
+
+export function getProductBySlug(slug: string): InsuranceProduct | undefined {
+  return products.find((p) => p.slug === slug);
+}
+
+/** 依保險公司 id 取得旗下產品 */
+export function getProductsByInsurer(insurerId: string): InsuranceProduct[] {
+  return products.filter((p) => p.insurerId === insurerId);
+}
+
+/** 取產品的最低保費示例（用於列表顯示） */
+export function lowestPremium(p: InsuranceProduct): number | null {
+  if (!p.premiumExamples.length) return null;
+  return Math.min(...p.premiumExamples.map((e) => e.annualPremium));
+}

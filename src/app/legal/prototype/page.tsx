@@ -1,37 +1,56 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Boxes, Check, X } from "lucide-react";
+import { pageMetadata, breadcrumbJsonLd, jsonLdScript } from "@/lib/structured-data";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "原型開發說明",
-  description: "保險指南 Prototype 嘅技術架構、模擬資料設計同未完成項目清單。",
-  alternates: { canonical: "/legal/prototype" },
-};
+  description:
+    "保險指南 V2 Prototype 嘅資料架構、已完成的升級項目同仍未完成的部分。",
+  path: "/legal/prototype",
+});
 
 const DONE = [
-  "首頁：Hero 搜尋、四個保障類型入口、熱門產品比較、知識文章列表、透明度區域。",
-  "產品列表：按種類、公司、特色、模擬保費區間篩選，可排序，可清除篩選。",
-  "產品詳情：保障內容表格、條款重點六個面向、模擬保費說明、相關產品同文章。",
-  "產品比較：最多三個產品並排比較，每欄有「了解這項條款」說明，下方有客觀差異摘要。",
-  "保險知識中心：分類篩選、文章搜尋、常見問題（20 條）搜尋模組。",
-  "文章詳情：正文、重要資訊摘要、相關文章、相關產品比較、免責說明。",
-  "需求分析：四步問卷，結果包含保障項目、條款清單、文章同產品比較入口。",
-  "全站搜尋：可搜尋產品、示例公司、類別、文章標題同內容、常見問題。",
+  "首頁：Hero 搜尋、四個核心入口、主題指南、最近更新產品、常見術語與文章。",
+  "產品列表：按種類、保險公司、核實狀態、特色、保費區間篩選，可排序，可清除篩選。",
+  "產品詳情：快速判斷摘要、保障一覽表（逐項附來源）、不保事項、條款細項、保費示例、資料來源、轉介層、相關內容。",
+  "保險公司：獨立一級實體，列表頁 + 4 間公司詳情頁（成立年份、專注範圍、產品線）。",
+  "保險術語字典：39 個術語，A–Z 索引 + 術語頁（一句話答案、常見誤解、比較重點）。",
+  "比較引擎 V2：四層結構——快速差異、完整比較表、差異解釋、應問的問題（含複製清單）。",
+  "主題權威頁：4 個 Hub，內含比較重點、常見誤解、提問清單，同時掛接產品、術語、文章、FAQ。",
+  "問保險問題：/ask 檢索式問答引擎，回答只引用資料庫條目並附來源連結。",
+  "信任中心：/trust 九個章節，說明平台是甚麼、不是甚麼，以及不做排名的原因。",
+  "資料營運預覽：/admin-preview 提供完整度分級、核實狀態分佈、資料品質表與分析事件記錄。",
+  "回報資料問題：所有資料頁面都有回報入口，並明確說明原型階段不會實際送出。",
+  "SEO／GEO：JSON-LD（Organization、WebSite、Article、FAQPage、DefinedTerm、InsuranceProduct、BreadcrumbList）、canonical、sitemap、robots。",
 ];
 
 const NOT_DONE = [
   "真實保險公司／產品資料接入（需要與持牌機構簽訂資料授權協議）。",
   "即時報價或保費計算引擎（需要保險公司 API 或 actuarial 資料）。",
   "持牌保險專業人士名單及查詢功能（需要監管名單資料來源）。",
-  "用戶帳戶、收藏清單跨裝置同步（需要後端與資料庫）。",
-  "真實 AI 問答（目前用本地 FAQ 資料庫做關鍵字搜尋）。",
+  "用戶帳戶、收藏清單跨裝置同步（比較清單目前只存在瀏覽器 localStorage）。",
+  "後端資料庫與內容編輯流程（目前資料以本地 TypeScript 檔案管理，/admin-preview 唯讀）。",
+  "真實 AI 問答（/ask 目前用本地資料庫做檢索式匹配，架構已預留向量檢索接口）。",
   "多語言（目前只提供繁體中文）。",
-  "真實 SEO 排名（robots 已設為 noindex，正式上線前需調整）。",
+  "真實搜尋引擎排名累積（V2 已開放索引，但站點仍缺乏外部連結與真實內容規模）。",
 ];
 
 export default function PrototypePage() {
   return (
     <div className="container-page py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(
+            breadcrumbJsonLd([
+              { name: "首頁", href: "/" },
+              { name: "原型開發說明", href: "/legal/prototype" },
+            ]),
+          ),
+        }}
+      />
+
       <nav aria-label="麵包屑" className="text-[12.5px] text-ink-mute">
         <Link href="/" className="hover:text-brand-700">
           首頁

@@ -2,35 +2,74 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { SlidersHorizontal, X, ChevronDown, Search, PackageSearch } from "lucide-react";
+import {
+  SlidersHorizontal,
+  X,
+  ChevronDown,
+  Search,
+  PackageSearch,
+  ShieldCheck,
+} from "lucide-react";
 import { products } from "@/data/products";
+import { insurers } from "@/data/insurers";
 import { ProductCard } from "@/components/product-card";
-import type { InsuranceCategory } from "@/data/types";
+import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  VERIFICATION_LABELS,
+} from "@/data/types";
+import type { ProductCategory, VerificationStatus } from "@/data/types";
 
-const CATEGORIES: InsuranceCategory[] = ["醫療保險", "危疾保險", "人壽保險", "旅遊保險"];
-const INSURERS = Array.from(new Set(products.map((p) => p.insurer))).sort();
+// ============================================================
+// 產品瀏覽器 V2
+// ============================================================
+// 篩選維度：分類 / 保險公司 / 特色 / 保費區間 / 核實狀態
+// 排序維度：名稱 / 保費 / 保障項目數 / 續保（結構性排序，非排名）
+// ============================================================
+
+const INSURER_IDS = insurers.map((i) => i.id);
 const FEATURES = Array.from(new Set(products.flatMap((p) => p.features))).sort();
 
 const PREMIUM_BANDS = [
-  { id: "any", label: "任何模擬保費", min: 0, max: Infinity },
+  { id: "any", label: "任何保費示例", min: 0, max: Infinity },
   { id: "u3000", label: "HK$3,000 以下", min: 0, max: 3000 },
   { id: "3000-6000", label: "HK$3,000 – 6,000", min: 3000, max: 6000 },
   { id: "6000p", label: "HK$6,000 以上", min: 6000, max: Infinity },
 ];
 
-type SortKey = "name" | "premium-asc" | "premium-desc";
+const VERIFICATIONS: VerificationStatus[] = [
+  "verified",
+  "partially_verified",
+  "unverified",
+  "demo",
+];
 
-export function ProductExplorer({ initialCategory }: { initialCategory?: string }) {
+type SortKey = "name" | "premium-asc" | "premium-desc" | "coverage-desc" | "renewal";
+
+function minPremium(p: (typeof products)[number]): number {
+  if (!p.premiumExamples.length) return Infinity;
+  return Math.min(...p.premiumExamples.map((e) => e.annualPremium));
+}
+
+export function ProductExplorer({
+  initialCategory,
+  initialInsurer,
+}: {
+  initialCategory?: string;
+  initialInsurer?: string;
+}) {
   const [keyword, setKeyword] = useState("");
   const [categories, setCategories] = useState<string[]>(
-    initialCategory && CATEGORIES.includes(initialCategory as InsuranceCategory)
+    initialCategory && initialCategory in CATEGORY_LABELS
       ? [initialCategory]
-      : []
+      : [],
   );
-  const [insurers, setInsurers] = useState<string[]>([]);
+  const [insurerSel, setInsurerSel] = useState<string[]>(
+    initialInsurer && INSURER_IDS.includes(initialInsurer) ? [initialInsurer] : [],
+  );
   const [features, setFeatures] = useState<string[]>([]);
   const [band, setBand] = useState("any");
-  const [comparableOnly, setComparableOnly] = useState(false);
+  const [verifications, setVerifications] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>("name");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -39,47 +78,76 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
     const kw = keyword.trim().toLowerCase();
     const list = products.filter((p) => {
       if (categories.length && !categories.includes(p.category)) return false;
-      if (insurers.length && !insurers.includes(p.insurer)) return false;
-      if (features.length && !features.some((f) => p.features.includes(f))) return false;
-      if (p.simulatedPremium < b.min || p.simulatedPremium > b.max) return false;
-      if (comparableOnly && !p.keyFeatures.length) return false;
+      if (insurerSel.length && !insurerSel.includes(p.insurerId)) return false;
+      if (features.length && !features.some((f) => p.features.includes(f)))
+        return false;
+      if (verifications.length && !verifications.includes(p.verification.status))
+        return false;
+      const mp = minPremium(p);
+      if (mp < b.min || mp > b.max) return false;
       if (kw) {
-        const hay = `${p.name} ${p.insurer} ${p.category} ${p.coverageSummary} ${p.keyFeatures.join(" ")} ${p.exclusions.join(" ")}`.toLowerCase();
+        const hay =
+          `${p.name} ${p.nameEn} ${p.tagline} ${p.description} ${p.features.join(" ")} ${p.coverage
+            .map((c) => `${c.name} ${c.summary}`)
+            .join(" ")}`.toLowerCase();
         if (!hay.includes(kw)) return false;
       }
       return true;
     });
 
     const sorted = [...list];
-    if (sort === "name") sorted.sort((a, b2) => a.name.localeCompare(b2.name, "zh-HK"));
-    if (sort === "premium-asc") sorted.sort((a, b2) => a.simulatedPremium - b2.simulatedPremium);
-    if (sort === "premium-desc") sorted.sort((a, b2) => b2.simulatedPremium - a.simulatedPremium);
+    if (sort === "name")
+      sorted.sort((a, b2) => a.name.localeCompare(b2.name, "zh-HK"));
+    if (sort === "premium-asc") sorted.sort((a, b2) => minPremium(a) - minPremium(b2));
+    if (sort === "premium-desc")
+      sorted.sort((a, b2) => minPremium(b2) - minPremium(a));
+    if (sort === "coverage-desc")
+      sorted.sort((a, b2) => b2.coverage.length - a.coverage.length);
+    if (sort === "renewal")
+      sorted.sort((a, b2) => {
+        const order = {
+          guaranteed_renewal: 0,
+          guaranteed_renewal_period: 1,
+          non_guaranteed: 2,
+        } as const;
+        const av = a.renewal ? order[a.renewal.type] : 3;
+        const bv = b2.renewal ? order[b2.renewal.type] : 3;
+        return av - bv;
+      });
     return sorted;
-  }, [keyword, categories, insurers, features, band, comparableOnly, sort]);
+  }, [keyword, categories, insurerSel, features, verifications, band, sort]);
 
   const activeCount =
-    categories.length + insurers.length + features.length + (band !== "any" ? 1 : 0) + (comparableOnly ? 1 : 0);
+    categories.length +
+    insurerSel.length +
+    features.length +
+    verifications.length +
+    (band !== "any" ? 1 : 0);
 
-  function toggle(list: string[], value: string, setter: (v: string[]) => void) {
+  function toggle(
+    list: string[],
+    value: string,
+    setter: (v: string[]) => void,
+  ) {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
   }
 
   function clearAll() {
     setCategories([]);
-    setInsurers([]);
+    setInsurerSel([]);
     setFeatures([]);
+    setVerifications([]);
     setBand("any");
-    setComparableOnly(false);
     setKeyword("");
   }
 
   const filterPanel = (
     <div className="space-y-6">
       <FilterGroup title="保險種類">
-        {CATEGORIES.map((c) => (
+        {CATEGORY_ORDER.map((c) => (
           <CheckRow
             key={c}
-            label={c}
+            label={CATEGORY_LABELS[c]}
             checked={categories.includes(c)}
             onChange={() => toggle(categories, c, setCategories)}
             count={products.filter((p) => p.category === c).length}
@@ -87,14 +155,26 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
         ))}
       </FilterGroup>
 
-      <FilterGroup title="保險公司（示例品牌）">
-        {INSURERS.map((i) => (
+      <FilterGroup title="保險公司">
+        {insurers.map((i) => (
           <CheckRow
-            key={i}
-            label={i}
-            checked={insurers.includes(i)}
-            onChange={() => toggle(insurers, i, setInsurers)}
-            count={products.filter((p) => p.insurer === i).length}
+            key={i.id}
+            label={i.name}
+            checked={insurerSel.includes(i.id)}
+            onChange={() => toggle(insurerSel, i.id, setInsurerSel)}
+            count={products.filter((p) => p.insurerId === i.id).length}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup title="資料核實狀態">
+        {VERIFICATIONS.map((v) => (
+          <CheckRow
+            key={v}
+            label={VERIFICATION_LABELS[v]}
+            checked={verifications.includes(v)}
+            onChange={() => toggle(verifications, v, setVerifications)}
+            count={products.filter((p) => p.verification.status === v).length}
           />
         ))}
       </FilterGroup>
@@ -111,10 +191,13 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
         ))}
       </FilterGroup>
 
-      <FilterGroup title="模擬保費區間">
+      <FilterGroup title="保費示例區間">
         <div className="space-y-2">
           {PREMIUM_BANDS.map((b) => (
-            <label key={b.id} className="flex cursor-pointer items-center gap-2.5 text-[13px] text-ink-soft">
+            <label
+              key={b.id}
+              className="flex cursor-pointer items-center gap-2.5 text-[13px] text-ink-soft"
+            >
               <input
                 type="radio"
                 name="band"
@@ -126,18 +209,6 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
             </label>
           ))}
         </div>
-      </FilterGroup>
-
-      <FilterGroup title="比較功能">
-        <CheckRow
-          label="可加入比較清單"
-          checked={comparableOnly}
-          onChange={() => setComparableOnly((v) => !v)}
-          count={products.length}
-        />
-        <p className="text-[11.5px] leading-relaxed text-ink-mute">
-          所有模擬產品均可加入比較清單，最多同時比較 3 個。
-        </p>
       </FilterGroup>
     </div>
   );
@@ -157,7 +228,8 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
           香港保險產品資料庫
         </h1>
         <p className="mt-2 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft">
-          瀏覽不同保障類型，了解產品特色及主要條款。全部條目均為 Prototype 模擬資料。
+          瀏覽不同保障類型的產品資料。每個產品都標示資料核實狀態及可對照的來源文件，
+          讓你知道每個數字背後有多少依據。全部條目均為 Prototype 模擬資料。
         </p>
       </header>
 
@@ -167,7 +239,7 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
           <div className="lg:sticky lg:top-24">
             <div className="flex items-center justify-between rounded-t-xl border border-ink-line bg-white px-4 py-3">
               <span className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink">
-                <SlidersHorizontal size={15} /> 篩選
+                <SlidersHorizontal size={15} aria-hidden /> 篩選
                 {activeCount > 0 && (
                   <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand-800 px-1 text-[11px] font-semibold text-white">
                     {activeCount}
@@ -181,21 +253,29 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
                     onClick={clearAll}
                     className="inline-flex items-center gap-1 text-[12px] font-medium text-brand-700 hover:underline"
                   >
-                    <X size={12} /> 清除
+                    <X size={12} aria-hidden /> 清除
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setFiltersOpen((v) => !v)}
-                  className="lg:hidden inline-flex items-center gap-1 text-[12.5px] font-medium text-ink-soft"
+                  className="inline-flex items-center gap-1 text-[12.5px] font-medium text-ink-soft lg:hidden"
                 >
                   {filtersOpen ? "收起" : "展開"}
-                  <ChevronDown size={14} className={filtersOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+                  <ChevronDown
+                    size={14}
+                    className={
+                      filtersOpen ? "rotate-180 transition-transform" : "transition-transform"
+                    }
+                    aria-hidden
+                  />
                 </button>
               </div>
             </div>
 
-            <div className={`${filtersOpen ? "block" : "hidden"} lg:block rounded-b-xl border border-t-0 border-ink-line bg-white px-4 py-5`}>
+            <div
+              className={`${filtersOpen ? "block" : "hidden"} rounded-b-xl border border-t-0 border-ink-line bg-white px-4 py-5 lg:block`}
+            >
               {filterPanel}
             </div>
           </div>
@@ -205,11 +285,16 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
         <div className="min-w-0 flex-1">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1 sm:max-w-xs">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute" />
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute"
+                aria-hidden
+              />
               <input
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 placeholder="搜尋產品名稱或保障內容"
+                aria-label="搜尋產品"
                 className="h-10 w-full rounded-md border border-ink-line bg-white pl-9 pr-3 text-[13.5px] outline-none focus:border-brand-400"
               />
             </div>
@@ -225,23 +310,33 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
                 className="h-10 rounded-md border border-ink-line bg-white px-3 text-[13px] outline-none focus:border-brand-400"
               >
                 <option value="name">產品名稱</option>
-                <option value="premium-asc">模擬保費由低至高</option>
-                <option value="premium-desc">模擬保費由高至低</option>
+                <option value="premium-asc">保費示例由低至高</option>
+                <option value="premium-desc">保費示例由高至低</option>
+                <option value="coverage-desc">保障項目數量</option>
+                <option value="renewal">續保安排</option>
               </select>
             </div>
           </div>
 
-          <p className="mt-2 text-[12px] text-ink-mute">
-            模擬保費排序只反映 Prototype 資料，並不代表真實市場的價格排名。
+          <p className="mt-2 flex items-start gap-1.5 text-[12px] text-ink-mute">
+            <ShieldCheck size={13} className="mt-0.5 shrink-0" aria-hidden />
+            所有排序只反映資料庫中的記錄方式，不代表產品優劣或真實市場排名。
           </p>
 
           {activeCount > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {[...categories.map((c) => ["種類", c] as const),
-                ...insurers.map((i) => ["公司", i] as const),
+              {[
+                ...categories.map((c) => ["種類", CATEGORY_LABELS[c as ProductCategory]] as const),
+                ...insurerSel.map(
+                  (i) => ["公司", insurers.find((x) => x.id === i)?.name ?? i] as const,
+                ),
                 ...features.map((f) => ["特色", f] as const),
-                ...(band !== "any" ? ([["保費", PREMIUM_BANDS.find((b) => b.id === band)!.label]] as const) : []),
-                ...(comparableOnly ? ([["可比較", "可加入比較清單"]] as const) : []),
+                ...verifications.map(
+                  (v) => ["核實", VERIFICATION_LABELS[v as VerificationStatus]] as const,
+                ),
+                ...(band !== "any"
+                  ? ([["保費", PREMIUM_BANDS.find((b) => b.id === band)!.label]] as const)
+                  : []),
               ].map(([kind, val]) => (
                 <span
                   key={kind + val}
@@ -256,7 +351,7 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
                 onClick={clearAll}
                 className="inline-flex items-center gap-1 text-[12px] font-medium text-ink-mute hover:text-brand-700"
               >
-                <X size={12} /> 清除全部篩選
+                <X size={12} aria-hidden /> 清除全部篩選
               </button>
             </div>
           )}
@@ -267,8 +362,10 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
 
           {filtered.length === 0 ? (
             <div className="mt-6 rounded-xl border border-dashed border-ink-line bg-white p-12 text-center">
-              <PackageSearch size={30} className="mx-auto text-ink-mute" />
-              <p className="mt-3 text-[15px] font-medium text-ink">沒有符合條件的產品</p>
+              <PackageSearch size={30} className="mx-auto text-ink-mute" aria-hidden />
+              <p className="mt-3 text-[15px] font-medium text-ink">
+                沒有符合條件的產品
+              </p>
               <p className="mt-1.5 text-[13px] text-ink-mute">
                 試下放寬篩選條件，或者清除全部篩選重新開始。
               </p>
@@ -293,10 +390,18 @@ export function ProductExplorer({ initialCategory }: { initialCategory?: string 
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function FilterGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <h3 className="text-[12px] font-semibold uppercase tracking-wider text-ink-mute">{title}</h3>
+      <h2 className="text-[12px] font-semibold uppercase tracking-wider text-ink-mute">
+        {title}
+      </h2>
       <div className="mt-2.5 space-y-2">{children}</div>
     </div>
   );
@@ -322,7 +427,9 @@ function CheckRow({
         className="h-4 w-4 rounded border-ink-line accent-[#234570]"
       />
       <span className="flex-1">{label}</span>
-      {count !== undefined && <span className="text-[11.5px] text-ink-mute">{count}</span>}
+      {count !== undefined && (
+        <span className="text-[11.5px] text-ink-mute">{count}</span>
+      )}
     </label>
   );
 }

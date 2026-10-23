@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Menu, X, Search, Scale, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Menu, X, Search, Scale, ChevronRight, ChevronDown } from "lucide-react";
 import { Logo } from "./logo";
-import { navItems, site } from "@/lib/site";
+import { navItems, secondaryNavItems, site } from "@/lib/site";
 import { useCompare } from "@/lib/compare-context";
 import { GlobalSearchDialog } from "./global-search";
 
@@ -14,9 +14,12 @@ export function Header() {
   const { count } = useCompare();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMenuOpen(false);
+    setMoreOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -30,6 +33,19 @@ export function Header() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
+
   return (
     <>
       <div className="hidden bg-brand-950 text-white/85 text-[12px] md:block">
@@ -37,8 +53,8 @@ export function Header() {
           <p className="truncate">
             Prototype 演示網站：所有產品、條款及保費均為虛構模擬資料，並非真實報價。
           </p>
-          <Link href="/transparency" className="ml-4 shrink-0 underline-offset-2 hover:underline">
-            了解資料整理方式
+          <Link href="/trust" className="ml-4 shrink-0 underline-offset-2 hover:underline">
+            了解平台核實方式
           </Link>
         </div>
       </div>
@@ -47,24 +63,57 @@ export function Header() {
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
           <Logo />
 
-          <nav className="hidden lg:flex items-center gap-1 ml-6">
-            {navItems.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(item.href + "/");
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                    active
-                      ? "text-brand-800 bg-brand-50"
-                      : "text-ink-soft hover:text-brand-700 hover:bg-paper"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+          <nav className="hidden lg:flex items-center gap-1 ml-6" aria-label="主導航">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? "text-brand-800 bg-brand-50"
+                    : "text-ink-soft hover:text-brand-700 hover:bg-paper"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+
+            <div ref={moreRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreOpen((v) => !v)}
+                aria-expanded={moreOpen}
+                aria-haspopup="true"
+                className={`flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  secondaryNavItems.some((s) => isActive(s.href))
+                    ? "text-brand-800 bg-brand-50"
+                    : "text-ink-soft hover:text-brand-700 hover:bg-paper"
+                }`}
+              >
+                更多
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform ${moreOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {moreOpen && (
+                <div className="absolute left-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-ink-line bg-white py-1 shadow-lift">
+                  {secondaryNavItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`block px-3.5 py-2.5 text-[13.5px] transition-colors hover:bg-paper ${
+                        isActive(item.href)
+                          ? "font-medium text-brand-700"
+                          : "text-ink-soft"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
@@ -74,7 +123,7 @@ export function Header() {
               className="grid h-9 w-9 place-items-center rounded-md border border-ink-line text-ink-soft hover:bg-paper hover:text-brand-700 transition-colors"
               aria-label="開啟全站搜尋"
             >
-              <Search className="h-4.5 w-4.5" size={18} />
+              <Search size={18} />
             </button>
 
             <Link
@@ -112,12 +161,32 @@ export function Header() {
 
         {menuOpen && (
           <div className="lg:hidden border-t border-ink-line bg-white">
-            <nav className="mx-auto max-w-7xl px-4 py-2">
+            <nav className="mx-auto max-w-7xl px-4 py-2" aria-label="行動版導航">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="block rounded-md px-3 py-3 text-sm font-medium text-ink-soft hover:bg-paper"
+                  className={`block rounded-md px-3 py-3 text-sm font-medium ${
+                    isActive(item.href)
+                      ? "text-brand-800 bg-brand-50"
+                      : "text-ink-soft hover:bg-paper"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <p className="mt-3 border-t border-ink-line px-3 pt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-mute">
+                主題指南與更多
+              </p>
+              {secondaryNavItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`block rounded-md px-3 py-2.5 text-[13.5px] ${
+                    isActive(item.href)
+                      ? "font-medium text-brand-800"
+                      : "text-ink-soft hover:bg-paper"
+                  }`}
                 >
                   {item.label}
                 </Link>
@@ -138,6 +207,9 @@ export function Header() {
                   <ChevronRight size={15} />
                 </Link>
               </div>
+              <p className="px-3 py-3 text-[12px] text-ink-mute">
+                {site.nameZh} · {site.nameEn}
+              </p>
             </nav>
           </div>
         )}

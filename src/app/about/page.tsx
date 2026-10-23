@@ -2,16 +2,35 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Target, Users, Scale, Layers, ArrowRight } from "lucide-react";
 import { site } from "@/lib/site";
+import { products } from "@/data/products";
+import { dictionary } from "@/data/dictionary";
+import { articles } from "@/data/articles";
+import { hubs } from "@/data/hubs";
+import { insurers } from "@/data/insurers";
+import { pageMetadata, breadcrumbJsonLd, jsonLdScript } from "@/lib/structured-data";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "關於我們",
-  description: "保險指南（Insurance Compass HK）嘅平台定位、編輯原則同團隊介紹。",
-  alternates: { canonical: "/about" },
-};
+  description:
+    "保險指南（Insurance Compass HK）嘅平台定位、編輯原則同 V2 資料架構說明。",
+  path: "/about",
+});
 
 export default function AboutPage() {
   return (
     <div className="container-page py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(
+            breadcrumbJsonLd([
+              { name: "首頁", href: "/" },
+              { name: "關於我們", href: "/about" },
+            ]),
+          ),
+        }}
+      />
+
       <nav aria-label="麵包屑" className="text-[12.5px] text-ink-mute">
         <Link href="/" className="hover:text-brand-700">
           首頁
@@ -74,23 +93,44 @@ export default function AboutPage() {
           </p>
           <ul>
             <li>
-              <strong>條款結構化</strong>：保障範圍、除外責任、等候期、自付額、續保條件用同一組欄位呈現。
+              <strong>條款結構化</strong>：保障範圍、除外責任、等候期、自付額、續保條件用同一組欄位呈現，
+              每個項目附來源編號。
             </li>
             <li>
-              <strong>差異可見</strong>：比較表格會標示邊一欄喺不同產品之間有差異，並客觀整理差異摘要。
+              <strong>差異可見</strong>：比較引擎分四層——快速差異、完整比較表、差異解釋、應問的問題，
+              解釋差異由邊個條款機制造成。
             </li>
             <li>
               <strong>資料唔填補</strong>：冇資料嘅地方直接寫「資料未提供」，唔會用推測值填滿表格。
+            </li>
+            <li>
+              <strong>核實狀態透明</strong>：每個產品標示已核實／部分核實／尚未核實／原型模擬資料四級狀態，
+              讀者可以逐項查。
             </li>
             <li>
               <strong>限制清楚</strong>：平台唔會假裝能夠代替持牌專業人士嘅意見，亦唔會收集敏感個人資料。
             </li>
           </ul>
           <p>
-            未來正式上線後，我哋會加入持牌保險專業人士名單、產品資料核實狀態標示，以及按地區劃分嘅
-            保障選項資料庫，令呢個平台可以真正成為香港消費者嘅保險資訊入口。
+            現時資料庫包含 {products.length} 款產品資料、{insurers.length} 間保險公司、{dictionary.length} 個
+            保險術語、{articles.length} 篇知識文章同 {hubs.length} 個主題指南頁。呢個結構係刻意設計成可以
+            擴展到數千個產品同數萬條問題，而唔需要重寫任何頁面。
           </p>
         </div>
+      </section>
+
+      <section className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "產品資料", value: `${products.length} 款` },
+          { label: "保險公司", value: `${insurers.length} 間` },
+          { label: "保險術語", value: `${dictionary.length} 個` },
+          { label: "主題指南", value: `${hubs.length} 個` },
+        ].map((s) => (
+          <div key={s.label} className="rounded-xl border border-ink-line bg-white p-5">
+            <p className="text-[12px] text-ink-mute">{s.label}</p>
+            <p className="mt-0.5 text-[20px] font-semibold text-ink">{s.value}</p>
+          </div>
+        ))}
       </section>
 
       <section className="mt-12 rounded-2xl border border-brand-200 bg-brand-50/60 p-7">
@@ -108,10 +148,16 @@ export default function AboutPage() {
             <ArrowRight size={15} />
           </Link>
           <Link
-            href="/needs"
+            href="/dictionary"
             className="inline-flex h-10 items-center gap-1.5 rounded-md border border-brand-300 bg-white px-4 text-[13.5px] font-semibold text-brand-800 hover:bg-brand-100"
           >
-            使用需求分析工具
+            查保險術語字典
+          </Link>
+          <Link
+            href="/trust"
+            className="inline-flex h-10 items-center gap-1.5 rounded-md border border-brand-300 bg-white px-4 text-[13.5px] font-semibold text-brand-800 hover:bg-brand-100"
+          >
+            睇平台信任中心
           </Link>
         </div>
       </section>

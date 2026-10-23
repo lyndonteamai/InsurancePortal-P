@@ -3,6 +3,8 @@ import type { Article } from "./types";
 export const articles: Article[] = [
   {
     slug: "hk-medical-insurance-basics",
+    quickAnswer:
+      "香港醫療體系分公營（醫管局）及私營兩部分，收費與輪候不同。商業醫療保險主要覆蓋私人住院開支，判斷自己需要甚麼保險之前，先要搞清楚自己實際在哪裏看醫生、用哪一類服務。",
     title: "香港醫療保險入門：公開醫療與私人醫療有什麼不同",
     category: "醫療保險",
     excerpt:
@@ -14,14 +16,14 @@ export const articles: Article[] = [
     sections: [
       {
         heading: "為什麼要先分清「邊度睇醫生」",
-        paragraphs: [
+        body: [
           "香港嘅醫療體系大致可以分成兩大部分：一個係由醫院管理局同衞生署運作嘅公營醫療體系，另一個就係私營醫療體系，兩者嘅收費結構、輪候情況同服務性質都好唔同。",
           "好多香港市民都會用公營醫療做日常門急診，再以私人醫療處理需要較快輪候或者特定專科嘅情況。理解咗自己嘅就醫習慣，之後再睇保險保障邊啲風險，先至有實際意義。",
         ],
       },
       {
         heading: "自付額：直接影響你實際要付幾多",
-        paragraphs: [
+        body: [
           "自付額（deductible）係指喺保險公司開始計算賠償之前，投保人自己要先承擔嘅指定金額。可以理解為保單嘅「入場費」——自付額愈高，保費通常愈平，但一旦要索償，你自己要夾嘅錢亦愈多。",
           "自付額嘅計算方式唔統一，常見有「每次住院計算」、「每個保單年度計算」同「終身累積計算」三種。同一個保障上限，計法唔同，最終自付嘅總額可以差好遠。所以比較產品時，一定要睇清楚自付額係點樣計、幾時重設。",
         ],
@@ -33,20 +35,20 @@ export const articles: Article[] = [
       },
       {
         heading: "最高保障額：唔等於你一定可以攞到呢個數",
-        paragraphs: [
+        body: [
           "保單上寫住「最高 HK$10,000,000」，意思係保險公司喺保單條款範圍內，最多只會賠到呢個金額。實際可賠金額會受幾樣嘢影響：自付額、保障範圍、你嘅病房級別選擇、藥物同器材是否喺指定清單內，以及同一事故內有冇其他限制。",
           "另外好多醫療保單會設「分項上限」，例如手術費有獨立上限、器官移植有獨立上限。總額好高唔代表每個項目都唔會用盡自己嘅額度。",
         ],
       },
       {
         heading: "病房級別點樣影響保費同保障",
-        paragraphs: [
+        body: [
           "大部分住院保障會分私家、半私家同普通病房。保費同保障上限通常會隨病房級別上升。呢個取捨好實用：如果你日常用公營普通病房，私家病房保障對你嚟講可能用唔著，但如果你想喺私家病房住，自然就要睇私家病房方案。",
         ],
       },
       {
         heading: "比較醫療保險時應該留意嘅五件事",
-        paragraphs: [
+        body: [
           "先寫低自己最關注嘅一至兩項（例如係自付額幾多、或者私家病房要唔要），再逐項對照，會比逐格填表有效率得多。",
         ],
         bullets: [
@@ -66,11 +68,14 @@ export const articles: Article[] = [
     ],
     relatedSlugs: ["deductible-explained", "hospital-cover-limit", "waiting-period"],
     relatedProductIds: ["hs-med-01", "bc-med-01", "hs-med-02"],
+    relatedTerms: ["life-insurance", "sum-insured", "beneficiary", "cash-value"],
     disclaimer:
       "本文為 Prototype 教學示例，內容為虛構示範，並非真實香港保險制度或產品條款之權威說明。",
   },
   {
     slug: "medical-vs-critical-illness",
+    quickAnswer:
+      "醫療保險報銷實際發生的合規醫療開支，屬實報實銷；危疾保險在符合條款定義時一次性賠付保額，用途是替代因病失去的收入。兩者處理的風險不同，完整方案通常需要兩者配合。",
     title: "醫療保險與危疾保險有什麼分別？",
     category: "保險入門",
     excerpt:
@@ -82,28 +87,28 @@ export const articles: Article[] = [
     sections: [
       {
         heading: "最核心嘅分別：報銷 定 一次性賠付",
-        paragraphs: [
+        body: [
           "醫療保險嘅基本邏輯係「先有支出、後有賠償」：你喺符合條款嘅情況下產生咗合資格醫療費用，保險公司先會按條款喺上限內報銷。你實際花咗幾多、有冇自付額、是否用咗指定網絡，會直接影響最終攞到幾多。",
           "危疾保險嘅基本邏輯係「符合疾病定義、一次性賠付」：只要你符合保單列明嘅疾病定義（通常包括對身體功能嘅要求），保險公司就會一次性賠付約定金額，唔需要你先俾錢。",
         ],
       },
       {
         heading: "兩種保障處理嘅風險唔同",
-        paragraphs: [
+        body: [
           "醫療保險處理嘅係「錢」嘅風險：一旦不幸需要住院或接受治療，醫院收費可以好快累積。危疾保險處理嘅係「收入」嘅風險：確診嚴重疾病之後，治療期間收入可能中斷，但日常開支、康復期照顧唔一定要靠醫療報銷去支付。",
           "所以好多時候人會同時考慮兩者：一個處理治療費，一個處理收入損失。呢個係結構上嘅互補，唔係話某一個就一定「好啲」。",
         ],
       },
       {
         heading: "危疾保險最值得留意嘅係「定義」",
-        paragraphs: [
+        body: [
           "危疾保險嘅保障範圍唔係由日常語言決定，而係由保單附表列明嘅疾病定義決定。同一個「癌症」，不同保單可能要求不同嘅分期、必須做嘅治療、或者持續符合嘅時間長短。",
           "比較危疾保險時，睇清定義往往比睇保費更重要。你可以留意：有幾多種受保疾病、係咪一次性理賠、等待期長短、以及有冇多次理賠嘅設計。",
         ],
       },
       {
         heading: "常見誤解",
-        paragraphs: [
+        body: [
           "第一個誤解係「有醫療保險就唔需要危疾保險」。實際情況係兩者嘅理賠條件同賠付方式唔同：住院費報銷唔會自動補償你因病冇收入嗰幾個月。",
           "第二個誤解係「危疾保險賠錢就係醫療費」。危疾保障金係一次性賠付，通常唔指定用途，實際上好多時候係用嚟取代期間收入同生活開支。",
         ],
@@ -116,11 +121,14 @@ export const articles: Article[] = [
     ],
     relatedSlugs: ["hk-medical-insurance-basics", "waiting-period", "renewal-terms"],
     relatedProductIds: ["ml-ci-01", "ml-ci-02", "bc-ci-01"],
+    relatedTerms: ["critical-illness", "survival-period", "claim", "waiting-period-extension"],
     disclaimer:
       "本文為 Prototype 教學示例，內容為虛構示範，並非真實保險條款或理賠指引。",
   },
   {
     slug: "deductible-explained",
+    quickAnswer:
+      "自付額是保險公司開始賠付前，你須先自行支付的金額，可以按每次事故或每個保單年度計算。比較產品時應用「每年保費 + 預期自付額」而非單看保費。",
     title: "自付額是什麼？保費與自付額之間的取捨",
     category: "保險條款",
     excerpt:
@@ -132,20 +140,20 @@ export const articles: Article[] = [
     sections: [
       {
         heading: "一句話解釋",
-        paragraphs: [
+        body: [
           "自付額係按照保單約定，喺保險公司計算賠償之前，由投保人自己承擔嘅指定金額。簡單講：你同保險公司一齊分擔醫療費，只不過你嗰部分要自己先食。",
         ],
       },
       {
         heading: "點解會有自付額",
-        paragraphs: [
+        body: [
           "自付額主要有兩個作用。第一，喺保障成本上分擔風險，令保費可以定得較平；第二，抑制一啲高頻低額嘅索償，令產品結構更易管理。",
           "對投保人嚟講，代價係：你有冇真正用到保險，直接影響你嘅實際成本。用得少，自付額就係「白交咗」；用得多，自付額只佔總支出嘅一部分。",
         ],
       },
       {
         heading: "三種常見計算方式",
-        paragraphs: [
+        body: [
           "理解計法，比記住數字重要得多。以下以虛構住院費用 HK$120,000 為示例。",
         ],
         bullets: [
@@ -156,14 +164,14 @@ export const articles: Article[] = [
       },
       {
         heading: "自付額點樣影響保費",
-        paragraphs: [
+        body: [
           "一般情況下，**較高自付額 → 較低保費**，因為保險公司要承擔嘅期望成本低咗。但呢個關係唔係完全線性：自付額由 HK$0 提到 HK$500，保費可能只跌少少；由 HK$5,000 提到 HK$50,000，先至會有明顯差異。",
           "另外要留意「自付額」同「墊底費」（co-payment）唔同：自付額係每次事故嘅固定起點；墊底費係按比例分攤（例如報銷後自己再付 20%）。部分保單兩者都有。",
         ],
       },
       {
         heading: "實際比較時嘅建議做法",
-        paragraphs: [
+        body: [
           "用自己一個真實嘅典型場景去試算一次，好過睇保費數字。假設你一年內有幾多次門診、幾多次住院，用同一個場景套落兩份保單，就會睇到實際差異。",
         ],
         bullets: [
@@ -181,11 +189,14 @@ export const articles: Article[] = [
     ],
     relatedSlugs: ["hk-medical-insurance-basics", "hospital-cover-limit", "renewal-terms"],
     relatedProductIds: ["hs-med-01", "hs-med-02", "bc-med-02"],
+    relatedTerms: ["coverage-limit", "deductible", "exclusion", "policy-year"],
     disclaimer:
       "本文為 Prototype 教學示例，內容為虛構示範。",
   },
   {
     slug: "waiting-period",
+    quickAnswer:
+      "等候期是保單生效後、仍未能就指定疾病或事故索償的一段期間，用以區分投保前已有的狀況與投保後新發生的風險。醫療保險的疾病等候期通常長於意外等候期。",
     title: "保險等候期是什麼？為什麼要設等候期",
     category: "保險條款",
     excerpt:
@@ -197,33 +208,33 @@ export const articles: Article[] = [
     sections: [
       {
         heading: "等候期嘅作用",
-        paragraphs: [
+        body: [
           "等候期最常見嘅目的係防止「逆向選擇」：如果一啲已知有健康問題嘅人可以在保單生效後即刻索償，保險公司就會面對一批高風險投保人，保費亦會被迫上升。等候期可以過濾呢類情況。",
         ],
       },
       {
         heading: "常見長度",
-        paragraphs: [
+        body: [
           "住院及醫療保障嘅等候期通常係 30 日；危疾保險一般 60 至 90 日，針對較嚴重疾病可能長至 180 日；定期人壽一般較短，甚至 0 日但另有首年條款。旅遊保險則通常係即時生效。",
           "以上數字為示例參考，實際以個別保單為準。",
         ],
       },
       {
         heading: "意外係咪一定豁免",
-        paragraphs: [
+        body: [
           "好多保單會寫明「因意外引致嘅受保事件」不受等候期限制，因為意外唔涉及投保前已知嘅健康狀況。但要注意呢個豁免通常只適用於「非意外引致」嘅疾病，即係話如果你本來就有某項疾病，等候期內發病通常唔受保。",
           "所以真正要留意嘅唔只係「有冇意外豁免」，而係「我嘅情況係咪屬於意外引致」。",
         ],
       },
       {
         heading: "等候期同「已有症狀」嘅分別",
-        paragraphs: [
+        body: [
           "等候期處理嘅係時間問題；「已有症狀」處理嘅係已知狀況問題。即使過咗等候期，如果你喺投保時已經有某項症狀，或者曾經就同一情況求診，而保單對「既往症」有定義同限制，相關claim仍然可能被拒絕。",
         ],
       },
       {
         heading: "實務建議",
-        paragraphs: [
+        body: [
           "如果你已知有某項健康狀況，或者近期曾經求診，投保前最值得做嘅一件事，就係直接向保險公司書面確認：你嘅情況屬於邊一類（已有症狀 / 觀察中 / 完全健康）。呢個確認比任何網上比較都直接。",
         ],
       },
@@ -235,11 +246,14 @@ export const articles: Article[] = [
     ],
     relatedSlugs: ["medical-vs-critical-illness", "renewal-terms", "deductible-explained"],
     relatedProductIds: ["ml-ci-01", "ml-ci-02", "bc-ci-01"],
+    relatedTerms: ["renewal", "grace-period", "premium", "free-look-period"],
     disclaimer:
       "本文為 Prototype 教學示例，內容為虛構示範。",
   },
   {
     slug: "renewal-terms",
+    quickAnswer:
+      "續保安排決定長期成本的可預測性。保證續保代表期內不重新核保，但保費通常仍隨年齡調整；不保證續保則可重新定價甚至拒絕續保，應在投保前確認。",
     title: "保險續保條件需要注意什麼？保證續保與逐年定價的差別",
     category: "保險條款",
     excerpt:
@@ -251,28 +265,28 @@ export const articles: Article[] = [
     sections: [
       {
         heading: "兩種常見安排",
-        paragraphs: [
+        body: [
           "第一種係「每年續保、每年定價」：保單一年一續，保費會隨年齡、健康狀況及公司整體經驗調整。大部分醫療保險屬於這類。",
           "第二種係「保費固定年期」：喺指定年期（例如 10 年、20 年）內保費維持不變，之後按年重新定價。危疾及定期人壽較常見呢種設計。",
         ],
       },
       {
         heading: "「保證續保」同「非保證續保」",
-        paragraphs: [
+        body: [
           "所謂保證續保，指公司承諾在指定條件下（例如沒有違約、沒有隱瞞重要資料）批准續保，唔會任意拒絕。非保證續保就係公司保留喺續保時重新評估嘅權利，包括可能要求體檢、調整保障範圍甚至唔批准。",
           "要注意：保證續保通常有附帶條件，呢啲條件就係條款入面嘅限制，唔好只睇「保證」兩個字。",
         ],
       },
       {
         heading: "續保條款點樣影響比較",
-        paragraphs: [
+        body: [
           "如果兩份保單保障上限相近，但一份係非保證續保、另一份有條件保證續保，長遠而言，第二份嘅成本可預測性會高好多，即使首年保費貴少少。",
           "另外，續保時公司可能調整嘅唔只係保費——有些產品會調整自付額、保障上限甚至病房級別。呢啲都係要喺續保時確認嘅項目。",
         ],
       },
       {
         heading: "其他需要留意嘅續保細節",
-        paragraphs: [
+        body: [
           "有啲保單要求喺指定日子之前（例如保障滿期日前 30 日）遞交續保申請，逾期可能當作自動終止。有啲會預設自動續保，亦有啲要求主動確認。呢個分別好細，但影響唔細。",
         ],
         bullets: [
@@ -284,7 +298,7 @@ export const articles: Article[] = [
       },
       {
         heading: "一個常見誤區",
-        paragraphs: [
+        body: [
           "好多人以為「續保」就等於「保障一直有效、唔會變」。實際上，續保係一張新嘅一年合約（或者固定年期合約嘅下一段），條款可能按當時適用嘅版本更新。保留一份你手上保單嘅條款副本，對日後查對非常有用。",
         ],
       },
@@ -296,11 +310,14 @@ export const articles: Article[] = [
     ],
     relatedSlugs: ["waiting-period", "hk-medical-insurance-basics", "deductible-explained"],
     relatedProductIds: ["bc-med-01", "ml-ci-01", "pa-life-01"],
+    relatedTerms: ["waiting-period", "waiting-period-extension", "pre-existing-condition", "exclusion"],
     disclaimer:
       "本文為 Prototype 教學示例，內容為虛構示範。",
   },
   {
     slug: "hospital-cover-limit",
+    quickAnswer:
+      "「最高保障額」只是上限，不代表一定可拿到這個數。實際可賠金額受自付額、分項上限、病房級別、不保事項及是否以實際開支為限共同影響。",
     title: "如何閱讀保險保障上限：總額、分項上限與分級上限",
     category: "保險理賠",
     excerpt:
@@ -312,20 +329,20 @@ export const articles: Article[] = [
     sections: [
       {
         heading: "第一層：總保障上限",
-        paragraphs: [
+        body: [
           "總上限係一張保單喺一個保單年度（或指定年期）內，最多賠償嘅總金額。好多產品會喺條款表最上面寫一個好大嘅數，例如 HK$10,000,000，但實際上呢個數字好少會喺單一事故中用盡。",
         ],
       },
       {
         heading: "第二層：分項上限",
-        paragraphs: [
+        body: [
           "保單通常會將保障拆成多項，每一項各有上限。示例：一張總上限 HK$10,000,000 嘅保單，可能同時有「手術費上限 HK$2,000,000」、「器官移植上限 HK$1,500,000」、「每日病房費上限 HK$8,000」等分項。",
           "分項上限先係實際最常遇到嘅瓶頸：總額仲有大量剩餘，但某個分項已經用盡。",
         ],
       },
       {
         heading: "第三層：分級或分項百分比",
-        paragraphs: [
+        body: [
           "部分計劃會列明「按保障項目分別報銷 80% 至 100%」。即係話某一類費用只報銷 80%，剩餘 20% 由你自付。呢個設計唔會出現喺「上限」呢一欄，但對最終金額嘅影響可以好大。",
         ],
         bullets: [
@@ -336,13 +353,13 @@ export const articles: Article[] = [
       },
       {
         heading: "病房級別上限",
-        paragraphs: [
+        body: [
           "住院保障通常會按病房級別設限：私家病房有較高每日上限，普通病房有另一個較低嘅上限。如果你可以自由選擇病房，但保單每日病房費上限低咗實際收費，差額就係你自付。",
         ],
       },
       {
         heading: "一個簡單嘅檢查清單",
-        paragraphs: [
+        body: [
           "睇一份保單嘅保障上限，建議按以下次序讀一次。",
         ],
         bullets: [
@@ -361,11 +378,14 @@ export const articles: Article[] = [
     ],
     relatedSlugs: ["hk-medical-insurance-basics", "deductible-explained", "renewal-terms"],
     relatedProductIds: ["hs-med-01", "bc-med-01", "bc-med-02"],
+    relatedTerms: ["deductible", "co-payment", "coverage-limit", "policy-year"],
     disclaimer:
       "本文為 Prototype 教學示例，內容為虛構示範。",
   },
   {
     slug: "critical-illness-claim-conditions",
+    quickAnswer:
+      "危疾索償能否成立，取決於你是否符合保單條款的疾病定義、嚴重程度與生存期要求，而不只是醫生診斷書上的名稱。理賠前應先核對條款原文。",
     title: "危疾保險的理賠條件：疾病定義點樣影響實際賠付",
     category: "危疾保險",
     excerpt:
@@ -377,14 +397,14 @@ export const articles: Article[] = [
     sections: [
       {
         heading: "點解同一個病名會有不同理賠結果",
-        paragraphs: [
+        body: [
           "危疾保險嘅保障範圍由保單附表列明嘅「疾病定義」決定。同一個疾病名稱，唔同保單可能要求唔同嘅分期、必須接受嘅治療，或者一段時間內持續符合某啲狀態。",
           "如果投保時唔清楚呢啲要求，就好可能出現「以為受保，實際唔受保」嘅落差。",
         ],
       },
       {
         heading: "常見嘅幾類定義要求",
-        paragraphs: [
+        body: [
           "以下係概念層面嘅分類，用嚟示範閱讀保單時可以留意啲咩。",
         ],
         bullets: [
@@ -397,21 +417,21 @@ export const articles: Article[] = [
       },
       {
         heading: "一次性理賠 vs 多次理賠",
-        paragraphs: [
+        body: [
           "一次性理賠係符合定義後賠付一筆約定金額，通常整份保單只賠一次。多次理賠就係喺符合間隔期同次數上限下，就不同事件再賠多過。",
           "多次理賠通常保費較高，適合本身已有危疾保障、又希望喺康復後再有多一層保障嘅人；但如果你本身完全冇危疾保障，先有一份基本保障往往更實際。",
         ],
       },
       {
         heading: "保障金可以用嚟做咩",
-        paragraphs: [
+        body: [
           "危疾保障金一般唔指定用途。實際上最常見嘅用途係喺康復期間取代收入、支付康復期生活開支、以及處理因病而產生嘅非醫療開支（例如家居改裝、照顧者安排）。",
           "呢個亦係危疾保險同醫療保險分工唔同嘅地方：醫療報銷治療開支，危疾賠付補償期間嘅損失。",
         ],
       },
       {
         heading: "比較時要問自己嘅三個問題",
-        paragraphs: [
+        body: [
           "如果你認真考慮危疾保險，呢三條問題可以幫你聚焦。",
         ],
         bullets: [
@@ -428,11 +448,14 @@ export const articles: Article[] = [
     ],
     relatedSlugs: ["medical-vs-critical-illness", "waiting-period", "renewal-terms"],
     relatedProductIds: ["ml-ci-01", "ml-ci-02", "bc-ci-01"],
+    relatedTerms: ["medical-insurance", "critical-illness", "sum-insured", "income-protection"],
     disclaimer:
       "本文為 Prototype 教學示例，內容為虛構示範，並非真實保單定義或理賠指引。",
   },
   {
     slug: "life-insurance-types",
+    quickAnswer:
+      "人壽保險的核心功能是替代家庭收入。定期人壽是純風險轉移、保費固定但無現金值；儲蓄型人壽有保證現金值但保費高得多，比較時必須把保證與非保證分開看。",
     title: "人壽保險三大類：定期壽險、儲蓄壽險與終身壽險的分別",
     category: "人壽保險",
     excerpt:
@@ -444,35 +467,35 @@ export const articles: Article[] = [
     sections: [
       {
         heading: "先分清楚：保障 vs 儲蓄",
-        paragraphs: [
+        body: [
           "人壽保險最核心嘅功能係身故保障（同一啲保單亦會包含完全永久傷殘）。至於保單入面有冇「儲蓄成分」，係另一個問題，好多人喺呢度混淆咗。",
           "判斷方法好簡單：如果保單嘅保障金額唔會隨時間增加，而保費入面有一部分對應非保證嘅長遠金額，咁嗰部分就係儲蓄成分。",
         ],
       },
       {
         heading: "定期壽險：純保障，年期有限",
-        paragraphs: [
+        body: [
           "定期壽險喺指定年期（例如 10 年、20 年）內提供身故保障，期滿後保障結束，大多數情況下冇現金價值。",
           "由於冇儲蓄成分，保費相對較平，適合已經有其他長期儲蓄安排、而淨係想補上一段年期身故保障嘅人。",
         ],
       },
       {
         heading: "儲蓄壽險：附帶非保證成分",
-        paragraphs: [
+        body: [
           "儲蓄壽險通常年期較長，唔只係身故保障，仲會有非保證紅利或非保證滿期給付。呢啲金額由保險公司嘅投資表現同派發政策決定，可以高過亦都可以低過示意水平，甚至可能係零。",
           "要特別留意：產品名稱入面有「儲蓄」、「儲蓄壽險」或者「終身」呢啲字眼，唔等於你嘅本金有保證。",
         ],
       },
       {
         heading: "終身壽險：保障年期最長",
-        paragraphs: [
+        body: [
           "終身壽險一般提供終身保障，保費通常係三者中最高，因為保險公司要承擔嘅年期最長。",
           "值唔值取決於你嘅預算同埋對「終身保障」呢個特性嘅需求，唔存在通用答案。",
         ],
       },
       {
         heading: "一個實用嘅比較框架",
-        paragraphs: [
+        body: [
           "比較人壽保險時，建議用同一組問題去問每個方案，而唔係淨係比保費。",
         ],
         bullets: [
@@ -486,11 +509,12 @@ export const articles: Article[] = [
     ],
     keyTakeaways: [
       "人壽保險嘅核心係身故保障，儲蓄成分係可選附加。",
-      "定期壽險最平但年期有限；儲蓄壽險有非保證成分；終身壽險最貴但保障最長。",
+      "三種人壽的取捨是「年期 vs 儲蓄成分」：定期壽險年期有限、儲蓄壽險含非保證成分、終身壽險保障期最長但保費結構不同。",
       "有「儲蓄」字眼唔等於本金有保證回報。",
     ],
     relatedSlugs: ["renewal-terms", "medical-vs-critical-illness"],
     relatedProductIds: ["ml-life-01", "pa-life-01", "hs-life-01"],
+    relatedTerms: ["medical-insurance", "hospitalisation", "outpatient", "deductible", "pre-existing-condition"],
     disclaimer:
       "本文為 Prototype 教學示例，內容為虛構示範，並非真實產品或投資建議。",
   },

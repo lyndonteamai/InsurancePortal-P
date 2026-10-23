@@ -13,13 +13,30 @@ import { site } from "@/lib/site";
 import { products } from "@/data/products";
 import { articles } from "@/data/articles";
 import { faqs } from "@/data/faqs";
+import { dictionary } from "@/data/dictionary";
+import { hubs } from "@/data/hubs";
+import { insurers } from "@/data/insurers";
+import { globalSources } from "@/data/sources";
+import {
+  VERIFICATION_LABELS,
+  VERIFICATION_DESCRIPTIONS,
+  type VerificationStatus,
+} from "@/data/types";
+import { pageMetadata, breadcrumbJsonLd, jsonLdScript } from "@/lib/structured-data";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "資料來源及更新方式",
   description:
-    "保險指南如何整理保險產品資料、標示來源同核實狀態，以及商業合作與客觀資訊嘅分隔原則。",
-  alternates: { canonical: "/transparency" },
-};
+    "保險指南如何整理保險產品資料、標示來源同四級核實狀態，以及商業合作與客觀資訊嘅分隔原則。",
+  path: "/transparency",
+});
+
+const VERIFICATION_ORDER: VerificationStatus[] = [
+  "verified",
+  "partially_verified",
+  "unverified",
+  "demo",
+];
 
 export default function TransparencyPage() {
   const latest = products
@@ -29,6 +46,18 @@ export default function TransparencyPage() {
 
   return (
     <div className="container-page py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(
+            breadcrumbJsonLd([
+              { name: "首頁", href: "/" },
+              { name: "資料來源及更新方式", href: "/transparency" },
+            ]),
+          ),
+        }}
+      />
+
       <nav aria-label="麵包屑" className="text-[12.5px] text-ink-mute">
         <Link href="/" className="hover:text-brand-700">
           首頁
@@ -51,7 +80,7 @@ export default function TransparencyPage() {
         {[
           { icon: Database, label: "產品條目", value: `${products.length} 個模擬產品` },
           { icon: FileSearch, label: "知識文章", value: `${articles.length} 篇模擬文章` },
-          { icon: ShieldCheck, label: "常見問題", value: `${faqs.length} 條模擬問答` },
+          { icon: ShieldCheck, label: "保險術語", value: `${dictionary.length} 條術語` },
           { icon: CalendarClock, label: "最近更新", value: latest },
         ].map((s) => {
           const Icon = s.icon;
@@ -73,12 +102,41 @@ export default function TransparencyPage() {
             虛構示例資料，存放在本地 TypeScript 資料檔案中，唔係從任何保險公司或第三方網站擷取。
           </p>
           <ul>
-            <li>示例保險公司：Harbor Shield、Maple Life、BrightCare、Pioneer Assurance（全部為虛構品牌）。</li>
-            <li>示例產品編號格式：IC-（產品 ID 大寫），只作識別用途。</li>
+            <li>
+              示例保險公司：
+              {insurers.map((i) => i.name).join("、")}
+              （全部為虛構品牌，平台資料庫合共 {globalSources.length} 份來源文件記錄）。
+            </li>
+            <li>每個保障項目同不保事項都帶有來源編號，可以逐項追溯。</li>
             <li>所有保費、保障上限、自付額、等候期同續保條件均為示意數字。</li>
             <li>知識文章以一般保險概念為主，唔會引用真實條款原文或法律規定。</li>
           </ul>
         </div>
+      </section>
+
+      <section id="verification" className="mt-12 scroll-mt-24">
+        <h2 className="text-[20px] font-semibold tracking-tight text-ink">
+          四級核實狀態
+        </h2>
+        <p className="mt-2 max-w-3xl text-[13.5px] leading-relaxed text-ink-soft">
+          平台唔會隱藏自己嘅資料缺口。每個產品都有一個核實狀態，讀者可以點擊徽章展開睇到具體意思，
+          亦可以睇到邊啲欄位仲未核實。
+        </p>
+        <ul className="mt-4 space-y-2">
+          {VERIFICATION_ORDER.map((status) => (
+            <li
+              key={status}
+              className="rounded-lg border border-ink-line bg-white px-4 py-3"
+            >
+              <span className="text-[13.5px] font-semibold text-ink">
+                {VERIFICATION_LABELS[status]}
+              </span>
+              <span className="mt-1 block text-[12.5px] leading-relaxed text-ink-soft">
+                {VERIFICATION_DESCRIPTIONS[status]}
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section id="data" className="mt-12 scroll-mt-24">
@@ -87,10 +145,12 @@ export default function TransparencyPage() {
           <p>每一條產品資料會用同一套結構整理，方便用戶逐項對照同一類資訊：</p>
           <ul>
             {[
-              "基本資訊：產品名稱、保險公司、保險種類、模擬產品編號、資料更新日期。",
-              "保障內容：保障項目、保障說明、模擬保障上限、主要限制。",
-              "條款重點：保障範圍、除外責任、等候期、自付額、續保條件、需要進一步確認的事項。",
-              "保費示例：虛構年保費及相關聲明。",
+              "基本資訊：產品名稱、保險公司、保險種類、投保資格、資料更新日期。",
+              "保障內容：逐項保障項目、保障說明、額度描述，每項附來源編號。",
+              "不保事項：主要除外責任，同樣可追溯到來源。",
+              "條款細項：等候期、自付額、續保條件、需要注意的事項。",
+              "保費示例：情境標籤、假設條件同年保費，標明是否為示例數字。",
+              "資料來源：來源文件類型、發佈機構、版本與日期，無來源時明示。",
             ].map((t) => (
               <li key={t}>{t}</li>
             ))}
@@ -177,6 +237,42 @@ export default function TransparencyPage() {
           </ul>
         </div>
       </section>
+
+      <div className="mt-12 rounded-xl border border-ink-line bg-white p-5">
+        <h2 className="text-[15px] font-semibold text-ink">延伸閱讀</h2>
+        <ul className="mt-2.5 space-y-1.5 text-[13.5px]">
+          <li>
+            <Link href="/trust" className="text-brand-700 hover:underline">
+              信任中心
+            </Link>
+            <span className="text-ink-mute">
+              ：平台是甚麼、不是甚麼，以及我們不做排名的原因。
+            </span>
+          </li>
+          <li>
+            <Link href="/dictionary" className="text-brand-700 hover:underline">
+              保險術語字典
+            </Link>
+            <span className="text-ink-mute">
+              ：{dictionary.length} 個術語，每個都附比較時應看的重點。
+            </span>
+          </li>
+          <li>
+            <Link href="/medical-insurance" className="text-brand-700 hover:underline">
+              主題指南
+            </Link>
+            <span className="text-ink-mute">
+              ：{hubs.length} 個主題頁，用比較方法與判斷重點切入。
+            </span>
+          </li>
+          <li>
+            <Link href="/legal/prototype" className="text-brand-700 hover:underline">
+              原型開發說明
+            </Link>
+            <span className="text-ink-mute">：已做、未做、以及刻意不做的部分。</span>
+          </li>
+        </ul>
+      </div>
 
       <p className="mt-10 text-[12px] leading-relaxed text-ink-mute">{site.prototypeNotice}</p>
     </div>

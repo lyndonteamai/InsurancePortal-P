@@ -22,15 +22,38 @@ import {
 } from "lucide-react";
 import { articles } from "@/data/articles";
 import { products } from "@/data/products";
+import { insurerMap } from "@/data/insurers";
+import { CATEGORY_LABELS, type ProductCategory } from "@/data/types";
 import { CompareButton } from "@/components/compare-button";
 
 type Option = { id: string; label: string; desc?: string };
 
 const STEP1: Option[] = [
-  { id: "medical", label: "醫療保險", desc: "住院、門診、慢病管理等醫療費用" },
-  { id: "critical", label: "危疾保險", desc: "符合疾病定義後提供保障金" },
-  { id: "life", label: "人壽保險", desc: "身故保障及非保證儲蓄成分" },
-  { id: "travel", label: "旅遊保險", desc: "短期旅程嘅醫療及行程保障" },
+  {
+    id: "medical",
+    label: CATEGORY_LABELS.medical,
+    desc: "住院、門診、慢病管理等醫療費用",
+  },
+  {
+    id: "critical-illness",
+    label: CATEGORY_LABELS["critical-illness"],
+    desc: "符合疾病定義後提供保障金",
+  },
+  {
+    id: "life",
+    label: CATEGORY_LABELS.life,
+    desc: "身故保障及非保證儲蓄成分",
+  },
+  {
+    id: "travel",
+    label: CATEGORY_LABELS.travel,
+    desc: "短期旅程嘅醫療及行程保障",
+  },
+  {
+    id: "savings-retirement",
+    label: CATEGORY_LABELS["savings-retirement"],
+    desc: "儲蓄、退休規劃同非保證金額",
+  },
   { id: "unsure", label: "尚未確定", desc: "先了解不同保險的分別" },
 ];
 
@@ -51,9 +74,10 @@ const STEP3: Option[] = [
 
 const CATEGORY_ICON: Record<string, typeof Stethoscope> = {
   medical: Stethoscope,
-  critical: HeartPulse,
+  "critical-illness": HeartPulse,
   life: ShieldCheck,
   travel: Plane,
+  "savings-retirement": Coins,
   unsure: HelpCircle,
 };
 
@@ -210,13 +234,16 @@ export function NeedsWizard() {
                     key={p.id}
                     className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink-line px-4 py-3"
                   >
-                    <Link href={`/products/${p.id}`} className="min-w-0 group">
+                    <Link href={`/products/${p.slug}`} className="min-w-0 group">
                       <span className="block text-[13.5px] font-medium text-ink group-hover:text-brand-700">
                         {p.name}
                       </span>
                       <span className="mt-0.5 block text-[11.5px] text-ink-mute">
-                        {p.insurer} · 模擬保費 HK${p.simulatedPremium.toLocaleString("en-US")} ·{" "}
-                        {p.coverageLimitLabel}
+                        {insurerMap[p.insurerId]?.name ?? "—"} · 示例保費 HK$
+                        {p.premiumExamples[0]?.annualPremium.toLocaleString("en-US") ??
+                          "—"}
+                        {" · "}
+                        {CATEGORY_LABELS[p.category]}
                       </span>
                     </Link>
                     <span className="flex items-center gap-2">
@@ -444,7 +471,7 @@ function buildResult(answers: Record<number, string>) {
       "病房級別對保費同日常使用嘅影響",
       "住院保障嘅等候期同意外豁免",
     ],
-    critical: [
+    "critical-illness": [
       "危疾疾病定義（例如分期、持續時間要求）",
       "一次性理賠同多次理賠嘅取捨",
       "等候期長短同已有症狀嘅分別",
@@ -461,6 +488,12 @@ function buildResult(answers: Record<number, string>) {
       "行程延誤／取消嘅觸發條件",
       "行李同個人財物嘅單件上限",
       "醫療保障嘅自付額同海外就醫程序",
+    ],
+    "savings-retirement": [
+      "非保證金額同保證金額嘅分別",
+      "紅利／基金派發嘅不保證性",
+      "供年期長短對保費嘅影響",
+      "退保同部分提取嘅可能損失",
     ],
     unsure: [
       "醫療保險報銷開支 vs 危疾保險賠付保險金",
@@ -505,9 +538,10 @@ function buildResult(answers: Record<number, string>) {
 
   const articleMap: Record<string, string[]> = {
     medical: ["hk-medical-insurance-basics", "deductible-explained", "hospital-cover-limit"],
-    critical: ["medical-vs-critical-illness", "waiting-period", "renewal-terms"],
+    "critical-illness": ["medical-vs-critical-illness", "waiting-period", "renewal-terms"],
     life: ["renewal-terms", "medical-vs-critical-illness"],
     travel: ["hk-medical-insurance-basics", "deductible-explained"],
+    "savings-retirement": ["renewal-terms", "medical-vs-critical-illness"],
     unsure: ["medical-vs-critical-illness", "hk-medical-insurance-basics", "deductible-explained"],
   };
 
@@ -535,7 +569,9 @@ function buildResult(answers: Record<number, string>) {
   ).slice(0, 4);
 
   const categoryProducts = products.filter((p) =>
-    cat === "unsure" ? true : p.category === ({ medical: "醫療保險", critical: "危疾保險", life: "人壽保險", travel: "旅遊保險" }[cat] ?? "")
+    cat === "unsure"
+      ? true
+      : p.category === (cat as ProductCategory),
   );
 
   return {

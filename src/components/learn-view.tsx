@@ -18,9 +18,9 @@ export function LearnView() {
       if (category && a.category !== category) return false;
       if (!kw) return true;
       const body = a.sections
-        .map((s) => `${s.heading} ${s.paragraphs.join(" ")} ${(s.bullets ?? []).join(" ")}`)
+        .map((s) => `${s.heading} ${s.body.join(" ")} ${(s.bullets ?? []).join(" ")}`)
         .join(" ");
-      const hay = `${a.title} ${a.excerpt} ${a.category} ${body}`.toLowerCase();
+      const hay = `${a.title} ${a.excerpt} ${a.quickAnswer} ${a.category} ${body}`.toLowerCase();
       return hay.includes(kw);
     });
   }, [keyword, category]);
@@ -151,6 +151,10 @@ export function LearnView() {
                       {a.title}
                     </h2>
                     <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">{a.excerpt}</p>
+                    <p className="mt-2 rounded-lg border-l-2 border-brand-300 bg-brand-50/50 px-3 py-2 text-[13px] leading-relaxed text-ink-soft">
+                      <span className="font-semibold text-brand-800">一句話答案：</span>
+                      {a.quickAnswer}
+                    </p>
                     <span className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-medium text-brand-700">
                       閱讀全文
                       <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />

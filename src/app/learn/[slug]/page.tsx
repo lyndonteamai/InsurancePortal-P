@@ -10,11 +10,14 @@ import {
   Check,
   Scale,
   ChevronLeft,
+  BookMarked,
 } from "lucide-react";
 import { articles } from "@/data/articles";
 import { products } from "@/data/products";
-import { CompareButton } from "@/components/compare-button";
+import { dictionary } from "@/data/dictionary";
 import { ProductCard } from "@/components/product-card";
+import { ReportIssueButton } from "@/components/report-issue-button";
+import { articleJsonLd, breadcrumbJsonLd, jsonLdScript } from "@/lib/structured-data";
 
 export function generateStaticParams() {
   return articles.map((a) => ({ slug: a.slug }));
@@ -48,10 +51,42 @@ export default async function ArticlePage({
   const related = articles.filter(
     (a) => article.relatedSlugs.includes(a.slug) && a.slug !== article.slug
   );
-  const relatedProducts = products.filter((p) => article.relatedProductIds.includes(p.id));
+  const relatedProducts = products.filter((p) =>
+    article.relatedProductIds.includes(p.id),
+  );
+  const relatedTerms = dictionary.filter((t) =>
+    (article.relatedTerms ?? []).includes(t.slug),
+  );
 
   return (
     <article className="container-page py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(
+            articleJsonLd({
+              title: article.title,
+              description: article.quickAnswer,
+              slug: article.slug,
+              updatedAt: article.updatedAt,
+              section: article.category,
+              keywords: article.relatedTerms,
+            }),
+          ),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(
+            breadcrumbJsonLd([
+              { name: "首頁", href: "/" },
+              { name: "保險知識", href: "/learn" },
+              { name: article.title, href: `/learn/${article.slug}` },
+            ]),
+          ),
+        }}
+      />
       <nav aria-label="麵包屑" className="text-[12.5px] text-ink-mute">
         <Link href="/" className="hover:text-brand-700">
           首頁
@@ -87,7 +122,16 @@ export default async function ArticlePage({
           </div>
         </header>
 
-        <div className="mt-6 rounded-lg border border-ink-line bg-white p-4">
+        <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50/60 p-4">
+          <p className="text-[11.5px] font-semibold uppercase tracking-wider text-brand-700">
+            一句話答案
+          </p>
+          <p className="mt-1.5 text-[14.5px] font-medium leading-relaxed text-ink">
+            {article.quickAnswer}
+          </p>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-ink-line bg-white p-4">
           <p className="text-[13.5px] leading-relaxed text-ink-soft">{article.intro}</p>
         </div>
 
@@ -95,7 +139,7 @@ export default async function ArticlePage({
           {article.sections.map((s) => (
             <section key={s.heading}>
               <h2>{s.heading}</h2>
-              {s.paragraphs.map((p, i) => (
+              {s.body.map((p, i) => (
                 <p key={i}>{p}</p>
               ))}
               {s.bullets && (
@@ -176,6 +220,26 @@ export default async function ArticlePage({
         </section>
       )}
 
+      {/* 相關術語 */}
+      {relatedTerms.length > 0 && (
+        <section className="mx-auto mt-10 max-w-3xl">
+          <h2 className="text-[18px] font-semibold tracking-tight text-ink">相關術語</h2>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {relatedTerms.map((t) => (
+              <li key={t.slug}>
+                <Link
+                  href={`/dictionary/${t.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-ink-line bg-white px-3 py-1.5 text-[13px] text-ink-soft hover:border-brand-300 hover:text-brand-700"
+                >
+                  <BookMarked size={13} />
+                  {t.zh}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* 免責說明 */}
       <section className="mx-auto mt-12 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 p-5">
         <h2 className="flex items-center gap-2 text-[14px] font-semibold text-amber-900">
@@ -186,6 +250,13 @@ export default async function ArticlePage({
         <p className="mt-2 text-[13px] leading-relaxed text-amber-900/90">
           本平台唔會收集你的健康資料，亦唔設任何投保或報價流程。正式上線前，所有內容都需要法律及監管審核。
         </p>
+        <div className="mt-4">
+          <ReportIssueButton
+            subjectType="article"
+            subjectLabel={article.title}
+            subjectId={article.slug}
+          />
+        </div>
       </section>
 
       <div className="mx-auto mt-8 max-w-3xl">

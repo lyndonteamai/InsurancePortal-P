@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Scale, Check, Plus, Info } from "lucide-react";
 import { useCompare, MAX_COMPARE_ITEMS } from "@/lib/compare-context";
+import { trackEvent } from "@/lib/analytics";
 import type { InsuranceProduct } from "@/data/types";
 
 export function CompareButton({
@@ -21,6 +22,7 @@ export function CompareButton({
   function handle() {
     if (inList) {
       remove(product.id);
+      trackEvent("compare_remove", { productId: product.id, count: count - 1 });
       setMsg("已從比較清單移除");
     } else {
       const r = add(product.id);
@@ -29,6 +31,7 @@ export function CompareButton({
       } else if (r === "exists") {
         setMsg("產品已在比較清單中");
       } else {
+        trackEvent("compare_add", { productId: product.id, count: count + 1 });
         setMsg("已加入比較清單");
       }
     }

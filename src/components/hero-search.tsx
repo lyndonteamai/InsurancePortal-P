@@ -3,14 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Package, BookOpen, CircleHelp, ArrowRight } from "lucide-react";
+import { Search, ArrowRight } from "lucide-react";
 import { searchAll, type SearchResult } from "@/lib/search";
-
-const META: Record<SearchResult["kind"], { label: string; icon: typeof Package }> = {
-  product: { label: "產品", icon: Package },
-  article: { label: "文章", icon: BookOpen },
-  faq: { label: "保險知識", icon: CircleHelp },
-};
+import { SEARCH_KIND_META } from "@/lib/search-ui";
+import { pushRecentSearch } from "./global-search";
 
 export function HeroSearch() {
   const [query, setQuery] = useState("");
@@ -24,6 +20,7 @@ export function HeroSearch() {
     e.preventDefault();
     const q = query.trim();
     if (!q) return;
+    pushRecentSearch(q);
     if (results.length > 0) {
       router.push(results[0].href);
     } else {
@@ -41,9 +38,9 @@ export function HeroSearch() {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => window.setTimeout(() => setFocused(false), 160)}
-            placeholder="搜尋醫療保險、危疾保險、保單條款或保險問題"
+            placeholder="搜尋醫療保險、危疾保險、自付額、保單條款或保險問題"
             className="h-11 w-full bg-transparent text-[15px] outline-none placeholder:text-ink-mute"
-            aria-label="搜尋保險產品、條款或保險問題"
+            aria-label="搜尋保險產品、術語、條款或保險問題"
           />
           <button
             type="submit"
@@ -70,30 +67,42 @@ export function HeroSearch() {
               <p className="mt-1.5 text-[12.5px] text-ink-mute">
                 請嘗試其他關鍵字，例如「自付額」、「危疾」、「續保」。
               </p>
-              <Link
-                href={`/search?q=${encodeURIComponent(query)}`}
-                className="mt-3 inline-flex text-[13px] font-medium text-brand-700 hover:underline"
-              >
-                查看完整搜尋結果
-              </Link>
+              <div className="mt-3 flex flex-wrap justify-center gap-3">
+                <Link
+                  href={`/search?q=${encodeURIComponent(query)}`}
+                  className="inline-flex text-[13px] font-medium text-brand-700 hover:underline"
+                >
+                  查看完整搜尋結果
+                </Link>
+                <Link
+                  href={`/ask?q=${encodeURIComponent(query)}`}
+                  className="inline-flex text-[13px] font-medium text-brand-700 hover:underline"
+                >
+                  用問答方式查詢
+                </Link>
+              </div>
             </div>
           ) : (
             <ul className="max-h-[340px] overflow-y-auto">
-              {results.slice(0, 8).map((r) => {
-                const Icon = META[r.kind].icon;
+              {results.slice(0, 8).map((r: SearchResult) => {
+                const Icon = SEARCH_KIND_META[r.kind].icon;
                 return (
                   <li key={`${r.kind}-${r.id}`}>
                     <Link
                       href={r.href}
+                      onClick={() => pushRecentSearch(query)}
                       className="flex items-start gap-3 border-b border-ink-line/70 px-4 py-3 last:border-b-0 hover:bg-paper"
                     >
-                      <Icon size={16} className="mt-0.5 shrink-0 text-brand-600" />
+                      <Icon
+                        size={16}
+                        className="mt-0.5 shrink-0 text-brand-600"
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13.5px] font-medium text-ink">
                           {r.title}
                         </span>
                         <span className="block truncate text-[12px] text-ink-mute">
-                          {META[r.kind].label} · {r.meta}
+                          {SEARCH_KIND_META[r.kind].label} · {r.subtitle}
                         </span>
                       </span>
                     </Link>

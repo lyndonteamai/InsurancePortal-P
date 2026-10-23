@@ -16,7 +16,7 @@ export function Footer() {
 
           {footerLinks.map((col) => (
             <div key={col.title}>
-              <h3 className="text-[13px] font-semibold text-ink">{col.title}</h3>
+              <h2 className="text-[13px] font-semibold text-ink">{col.title}</h2>
               <ul className="mt-3 space-y-2">
                 {col.items.map((item) => (
                   <li key={item.href + item.label}>
